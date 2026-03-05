@@ -1,0 +1,34 @@
+﻿using JulyCore.Data.Save;
+
+namespace JulyCore.Provider.Save
+{
+    /// <summary>
+    /// 基于重要性的保存策略
+    /// </summary>
+    public class ImportanceBasedSaveStrategy : ISaveStrategy
+    {
+        public bool ShouldSave(SaveContext context)
+        {
+            var importance = context.Data.Importance;
+            var signal = context.Signal;
+
+            switch (signal)
+            {
+                case SaveSignal.Low:
+                    return importance == SaveImportance.Critical;
+
+                case SaveSignal.Medium:
+                    return importance <= SaveImportance.Important;
+
+                case SaveSignal.High:
+                    return importance <= SaveImportance.Normal;
+
+                case SaveSignal.Immediate:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+    }
+}
