@@ -14,7 +14,7 @@ namespace JulyCore.Editor.UI
     /// </summary>
     public class CreateUIWindowEditor : EditorWindow
     {
-        private const string DefaultCodePath = "Assets/Game/Scripts/View/Windows";
+        private const string DefaultCodePath = "Assets/Game/Scripts/Views/Windows";
         private const string DefaultPrefabPath = "Assets/Game/Res/Prefabs/UI";
 
         private string _windowName = "";

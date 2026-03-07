@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -103,21 +103,13 @@ namespace JulyCore.Module.Scene
 
             try
             {
-                // 直接使用 IResourceProvider 加载场景
                 var scene = await _resourceProvider.LoadSceneAsync(sceneName, loadSceneMode, cancellationToken);
 
-                // 如果是单场景模式，更新当前场景
                 if (loadSceneMode == LoadSceneMode.Single)
                 {
-                    // 将旧场景加入栈（如果存在）
-                    if (!string.IsNullOrEmpty(_currentSceneName) && _currentSceneName != sceneName)
-                    {
-                        _sceneStack.Push(_currentSceneName);
-                    }
                     _currentSceneName = sceneName;
                 }
 
-                // 发布场景加载完成事件
                 _eventBus.Publish(new SceneLoadCompleteEvent
                 {
                     SceneName = sceneName,
@@ -189,6 +181,7 @@ namespace JulyCore.Module.Scene
 
         /// <summary>
         /// 异步切换场景（卸载当前场景并加载新场景）
+        /// 将当前场景压入场景栈，支持 GoBackAsync 返回
         /// </summary>
         /// <param name="sceneName">目标场景名称</param>
         /// <param name="cancellationToken">取消令牌</param>
@@ -201,7 +194,6 @@ namespace JulyCore.Module.Scene
 
             var fromSceneName = _currentSceneName;
 
-            // 发布场景切换开始事件
             _eventBus.Publish(new SceneSwitchStartEvent
             {
                 FromSceneName = fromSceneName ?? string.Empty,
@@ -210,16 +202,14 @@ namespace JulyCore.Module.Scene
 
             try
             {
-                // 卸载当前场景（如果存在且不是目标场景）
                 if (!string.IsNullOrEmpty(fromSceneName) && fromSceneName != sceneName)
                 {
-                    await UnloadSceneAsync(fromSceneName, cancellationToken);
+                    _sceneStack.Push(fromSceneName);
                 }
 
-                // 加载新场景
+                // LoadSceneMode.Single 会自动卸载旧场景，无需手动 Unload
                 var scene = await LoadSceneAsync(sceneName, LoadSceneMode.Single, cancellationToken);
 
-                // 发布场景切换完成事件
                 _eventBus.Publish(new SceneSwitchCompleteEvent
                 {
                     FromSceneName = fromSceneName ?? string.Empty,
@@ -239,6 +229,7 @@ namespace JulyCore.Module.Scene
 
         /// <summary>
         /// 返回上一场景（从场景栈中弹出）
+        /// 不会将当前场景压入栈，避免无限增长
         /// </summary>
         /// <param name="cancellationToken">取消令牌</param>
         /// <returns>加载的场景，如果没有上一场景则返回null</returns>
@@ -251,7 +242,33 @@ namespace JulyCore.Module.Scene
             }
 
             var previousSceneName = _sceneStack.Pop();
-            return await SwitchSceneAsync(previousSceneName, cancellationToken);
+            var fromSceneName = _currentSceneName;
+
+            _eventBus.Publish(new SceneSwitchStartEvent
+            {
+                FromSceneName = fromSceneName ?? string.Empty,
+                ToSceneName = previousSceneName
+            });
+
+            try
+            {
+                var scene = await LoadSceneAsync(previousSceneName, LoadSceneMode.Single, cancellationToken);
+
+                _eventBus.Publish(new SceneSwitchCompleteEvent
+                {
+                    FromSceneName = fromSceneName ?? string.Empty,
+                    ToSceneName = previousSceneName,
+                    Scene = scene
+                });
+
+                Log($"[{Name}] 返回场景: {fromSceneName ?? "无"} -> {previousSceneName}");
+                return scene;
+            }
+            catch (Exception ex)
+            {
+                LogError($"[{Name}] 返回场景失败: {fromSceneName ?? "无"} -> {previousSceneName}, 错误: {ex.Message}");
+                throw;
+            }
         }
 
         /// <summary>
