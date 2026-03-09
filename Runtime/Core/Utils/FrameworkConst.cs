@@ -1,4 +1,4 @@
-﻿namespace JulyCore.Core
+namespace JulyCore.Core
 {
     /// <summary>
     /// 框架相关的只读内容集中管理
@@ -27,6 +27,7 @@
         public const int PriorityAnalyticsModule = 21;     // 数据统计模块（依赖NetworkModule和SerializeModule）
         public const int PriorityFsmModule = 22;           // 状态机模块
         public const int PriorityPoolModule = 25;           // 对象池模块
+        public const int PriorityAdModule = 31;
         public const int PriorityAudioModule = 32;
         public const int PrioritySceneModule = 35;
         public const int PriorityUIModule = 40;
@@ -57,6 +58,7 @@
         
         // 业务支撑层
         public const int PriorityUIProvider = 40;             // UI（依赖资源、对象池）
+        public const int PriorityAdProvider = 40;              // 广告（独立，无框架内依赖）
         public const int PriorityAudioProvider = 41;          // 音频（依赖资源、对象池）
         public const int PrioritySceneProvider = 42;          // 场景
         

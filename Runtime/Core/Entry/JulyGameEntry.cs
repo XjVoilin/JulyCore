@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using JulyCore.Module.Analytics;
@@ -30,10 +30,12 @@ using JulyCore.Provider.ABTest;
 using JulyCore.Provider.Guide;
 using JulyCore.Module.Guide;
 using JulyCore.Core.Config;
+using JulyCore.Module.Ad;
 using JulyCore.Module.Activity;
 using JulyCore.Module.Config;
 using JulyCore.Module.Fsm;
 using JulyCore.Module.Scene;
+using JulyCore.Provider.Ad;
 using JulyCore.Provider.Activity;
 using JulyCore.Provider.Config;
 using JulyCore.Provider.Fsm;
@@ -119,6 +121,9 @@ namespace JulyCore.Core
             RegisterProviderType<IPerformanceProvider, UnityPerformanceProvider>();
             RegisterProviderType<IFsmProvider, FsmProvider>();
             
+            // === 广告 Provider（独立，无框架内依赖）===
+            RegisterProviderType<IAdProvider, NullAdProvider>();
+            
             // === 第二层：依赖第一层 Provider ===
             RegisterProviderType<IUIProvider, UIProvider>();
             RegisterProviderType<IAudioProvider, UnityAudioProvider>();
@@ -203,6 +208,7 @@ namespace JulyCore.Core
             moduleService.RegisterModule<PerformanceModule>();
             moduleService.RegisterModule<SceneModule>();
             moduleService.RegisterModule<SaveModule>();
+            moduleService.RegisterModule<AdModule>();
             moduleService.RegisterModule<AudioModule>();
             moduleService.RegisterModule<ConfigModule>();
             moduleService.RegisterModule<AnalyticsModule>();

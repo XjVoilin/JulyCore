@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace JulyCore.Core
 {
@@ -42,6 +42,7 @@ namespace JulyCore.Core
         Fsm = 1 << 19,
         Combat = 1 << 20,
         Encryption = 1 << 21,
+        Ad = 1 << 22,
         
         /// <summary>
         /// 启用所有通道
