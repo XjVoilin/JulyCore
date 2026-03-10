@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using UnityEngine;
@@ -244,15 +244,30 @@ namespace JulyCore.Provider.Resource
     internal class ResourceHandleTracker : MonoBehaviour
     {
         private IDisposable _handle;
+        private static bool _isApplicationQuitting;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            _isApplicationQuitting = false;
+        }
 
         internal void Initialize(IDisposable handle)
         {
             _handle = handle;
         }
 
+        private void OnApplicationQuit()
+        {
+            _isApplicationQuitting = true;
+        }
+
         private void OnDestroy()
         {
-            _handle?.Dispose();
+            if (!_isApplicationQuitting)
+            {
+                _handle?.Dispose();
+            }
             _handle = null;
         }
     }
