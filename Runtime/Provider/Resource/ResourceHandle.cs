@@ -207,7 +207,7 @@ namespace JulyCore.Provider.Resource
     {
         public T Asset { get; private set; }
 
-        internal ResourceHandle(T asset, string path, IResourceProvider provider, bool captureStackTrace = false)
+        public ResourceHandle(T asset, string path, IResourceProvider provider, bool captureStackTrace = false)
             : base(path, provider, captureStackTrace)
         {
             Asset = asset;
