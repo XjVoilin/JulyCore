@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using JulyCore.Core;
 using JulyCore.Data.UI;
 using JulyCore.Module.UI;
 using JulyCore.Provider.UI;
+using UnityEngine;
 
 namespace JulyCore
 {
@@ -315,6 +316,11 @@ namespace JulyCore
             #endregion
             
             #region 技术层方法（直接调用 IUIProvider，纯查询/预加载，无业务逻辑）
+
+            /// <summary>
+            /// 获取 UI 专用相机
+            /// </summary>
+            public static Camera UICamera => Provider?.UICamera;
 
             /// <summary>
             /// 尝试获取已打开的UI

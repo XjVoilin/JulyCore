@@ -99,10 +99,12 @@ namespace JulyCore.Provider.UI
     {
         public override int Priority => Frameworkconst.PriorityUIProvider;
         protected override LogChannel LogChannel => LogChannel.UI;
+        public Camera UICamera => _uiCamera;
 
         #region 常量
 
         private const string UIRootName = "UIRoot";
+        private const string UICameraName = "UICamera";
         private const string LayerNamePrefix = "Layer_";
         private const string UIMaskName = "UIMask";
 
@@ -114,6 +116,7 @@ namespace JulyCore.Provider.UI
         private readonly IPoolProvider _poolProvider;
         private IUIResourcePathResolver _pathResolver;
         private Transform _uiRoot;
+        private Camera _uiCamera;
 
         // 技术层数据存储（不包含业务逻辑）
         private readonly Dictionary<UILayer, Transform> _layerRoots = new Dictionary<UILayer, Transform>();
@@ -656,6 +659,7 @@ namespace JulyCore.Provider.UI
             _uiInfos.Clear();
             _idToIdentifier.Clear();
             _layerRoots.Clear();
+            _uiCamera = null;
             if (_uiRoot != null)
             {
                 UnityEngine.Object.Destroy(_uiRoot.gameObject);
@@ -673,17 +677,43 @@ namespace JulyCore.Provider.UI
             {
                 _uiRoot = existingRoot.transform;
                 Log($"[{Name}] 使用场景中已有的UIRoot");
-                return;
+            }
+            else
+            {
+                var rootObj = new GameObject(UIRootName);
+                rootObj.layer = LayerMask.NameToLayer("UI");
+                rootObj.AddComponent<UnityEngine.EventSystems.EventSystem>();
+                rootObj.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+                _uiRoot = rootObj.transform;
+                UnityEngine.Object.DontDestroyOnLoad(rootObj);
+                Log($"[{Name}] 创建UIRoot");
             }
 
-            // 创建UIRoot
-            var rootObj = new GameObject(UIRootName);
-            rootObj.AddComponent<UnityEngine.EventSystems.EventSystem>();
-            rootObj.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
-            
-            _uiRoot = rootObj.transform;
-            UnityEngine.Object.DontDestroyOnLoad(rootObj);
-            Log($"[{Name}] 创建UIRoot");
+            CreateUICamera();
+        }
+
+        private void CreateUICamera()
+        {
+            var cameraObj = new GameObject(UICameraName);
+            cameraObj.layer = LayerMask.NameToLayer("UI");
+            cameraObj.transform.SetParent(_uiRoot, false);
+
+            _uiCamera = cameraObj.AddComponent<Camera>();
+            _uiCamera.clearFlags = CameraClearFlags.Depth;
+            _uiCamera.cullingMask = 1 << LayerMask.NameToLayer("UI");
+            _uiCamera.orthographic = true;
+            _uiCamera.depth = _uiConfig?.UICameraDepth ?? 10f;
+            _uiCamera.orthographicSize = 9.6f;
+            _uiCamera.nearClipPlane = 0.3f;
+            _uiCamera.farClipPlane = 1000f;
+
+            var audioListener = cameraObj.GetComponent<AudioListener>();
+            if (audioListener != null)
+            {
+                UnityEngine.Object.Destroy(audioListener);
+            }
+
+            Log($"[{Name}] 创建UI相机 (depth: {_uiCamera.depth})");
         }
 
         private Transform GetOrCreateLayerRoot(UILayer layer)
@@ -695,18 +725,19 @@ namespace JulyCore.Provider.UI
 
             var layerName = $"{LayerNamePrefix}{layer}";
             var layerObj = new GameObject(layerName);
+            layerObj.layer = LayerMask.NameToLayer("UI");
             
-            // 配置Canvas组件
+            // 配置Canvas组件（使用 UI 相机）
             var canvas = layerObj.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = _uiCamera;
             canvas.sortingOrder = (int)layer;
+            canvas.planeDistance = _uiConfig?.PlaneDistance ?? 100f;
             
-            // 添加完整的UI组件
             var scaler = layerObj.AddComponent<CanvasScaler>();
             ApplyCanvasScaler(scaler);
             layerObj.AddComponent<GraphicRaycaster>();
             
-            // 设置父节点（在添加完所有UI组件后，确保Unity正确识别为UI元素）
             layerObj.transform.SetParent(_uiRoot, false);
             
             var result = layerObj.transform;
@@ -1232,7 +1263,7 @@ namespace JulyCore.Provider.UI
         private IObjectPool<TipItem> _tipPool;
         private readonly List<TipItem> _activeTips = new();
 
-        public TipManager(TipConfig config, UIConfig uiConfig, IResourceProvider resourceProvider, IPoolProvider poolProvider, Transform uiRoot, ProviderBase provider)
+        public TipManager(TipConfig config, Core.Config.UIConfig uiConfig, IResourceProvider resourceProvider, IPoolProvider poolProvider, Transform uiRoot, ProviderBase provider)
         {
             _config = config;
             _uiConfig = uiConfig;
@@ -1254,7 +1285,7 @@ namespace JulyCore.Provider.UI
             var containerObj = new GameObject("TipContainer");
             containerObj.transform.SetParent(_uiRoot, false);
 
-            // 配置 Canvas（最顶层）
+            // 配置 Canvas（Overlay 模式，始终渲染在所有 Camera Canvas 之上）
             var canvas = containerObj.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 9999;

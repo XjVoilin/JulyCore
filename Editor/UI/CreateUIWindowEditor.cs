@@ -337,6 +337,7 @@ public class {className} : UIBase
         {
             // 根节点：逻辑节点
             var root = new GameObject(className, typeof(RectTransform));
+            root.layer = LayerMask.NameToLayer("UI");
 
             var rootRect = root.GetComponent<RectTransform>();
             rootRect.anchorMin = Vector2.zero;
@@ -355,6 +356,7 @@ public class {className} : UIBase
             // ================================
             var placeholder = new GameObject("----占位----", typeof(RectTransform));
             placeholder.transform.SetParent(root.transform, false);
+            placeholder.layer = LayerMask.NameToLayer("UI");
 
             var image = placeholder.AddComponent<Image>();
             image.color = Color.clear; // 不影响视觉

@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using JulyCore.Data.UI;
+using UnityEngine;
 
 namespace JulyCore.Provider.UI
 {
@@ -105,6 +106,11 @@ namespace JulyCore.Provider.UI
     /// </summary>
     public interface IUIProvider : Core.IProvider
     {
+        /// <summary>
+        /// UI 专用相机
+        /// </summary>
+        Camera UICamera { get; }
+
         /// <summary>
         /// 打开UI（异步加载并实例化）
         /// 通过WindowIdentifier中的WindowName自动解析UI类型

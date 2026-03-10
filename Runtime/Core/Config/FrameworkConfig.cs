@@ -48,6 +48,12 @@ namespace JulyCore.Core.Config
         [Tooltip("屏幕适配模式：0 = 宽度适配，1 = 高度适配，0~1 之间按比例混合")]
         [Range(0f, 1f)]
         public float ScreenMatchMode = 1f;
+
+        [Tooltip("UI 相机渲染深度（需高于主相机，默认 10）")]
+        public float UICameraDepth = 10f;
+
+        [Tooltip("Canvas 与 UI 相机的距离")]
+        public float PlaneDistance = 100f;
     }
 
     /// <summary>
