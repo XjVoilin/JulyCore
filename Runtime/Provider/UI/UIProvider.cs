@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -125,6 +125,9 @@ namespace JulyCore.Provider.UI
         // Tip 管理
         private TipManager _tipManager;
 
+        // UI 配置
+        private UIConfig _uiConfig;
+
         #endregion
 
         /// <summary>
@@ -138,6 +141,9 @@ namespace JulyCore.Provider.UI
 
         protected override async UniTask OnInitAsync()
         {
+            // 读取 UI 配置
+            _uiConfig = FrameworkContext.Instance?.FrameworkConfig?.UIConfig;
+
             // 初始化资源路径解析器（默认使用约定路径）
             _pathResolver = new DefaultUIResourcePathResolver();
 
@@ -157,7 +163,7 @@ namespace JulyCore.Provider.UI
                 return;
             }
 
-            _tipManager = new TipManager(tipConfig, _resourceProvider,_poolProvider, _uiRoot, this);
+            _tipManager = new TipManager(tipConfig, _uiConfig, _resourceProvider, _poolProvider, _uiRoot, this);
             await _tipManager.InitAsync();
         }
 
@@ -696,7 +702,8 @@ namespace JulyCore.Provider.UI
             canvas.sortingOrder = (int)layer;
             
             // 添加完整的UI组件
-            layerObj.AddComponent<CanvasScaler>();
+            var scaler = layerObj.AddComponent<CanvasScaler>();
+            ApplyCanvasScaler(scaler);
             layerObj.AddComponent<GraphicRaycaster>();
             
             // 设置父节点（在添加完所有UI组件后，确保Unity正确识别为UI元素）
@@ -984,6 +991,19 @@ namespace JulyCore.Provider.UI
         #region 辅助方法
 
         /// <summary>
+        /// 将 FrameworkConfig 中的设计分辨率配置应用到 CanvasScaler
+        /// </summary>
+        private void ApplyCanvasScaler(CanvasScaler scaler)
+        {
+            if (scaler == null || _uiConfig == null) return;
+
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = _uiConfig.DesignResolution;
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            scaler.matchWidthOrHeight = _uiConfig.ScreenMatchMode;
+        }
+
+        /// <summary>
         /// 验证打开选项参数（增强健壮性）
         /// </summary>
         private void ValidateOpenOptions(UIOpenOptions options)
@@ -1199,6 +1219,7 @@ namespace JulyCore.Provider.UI
     internal class TipManager
     {
         private readonly TipConfig _config;
+        private readonly Core.Config.UIConfig _uiConfig;
         private readonly IResourceProvider _resourceProvider;
         private readonly IPoolProvider _poolProvider;
         private readonly Transform _uiRoot;
@@ -1208,12 +1229,13 @@ namespace JulyCore.Provider.UI
         private bool _isInitialized;
 
         // 使用框架对象池
-        private Provider.Pool.IObjectPool<TipItem> _tipPool;
+        private IObjectPool<TipItem> _tipPool;
         private readonly List<TipItem> _activeTips = new();
 
-        public TipManager(TipConfig config, IResourceProvider resourceProvider,IPoolProvider poolProvider, Transform uiRoot, ProviderBase provider)
+        public TipManager(TipConfig config, UIConfig uiConfig, IResourceProvider resourceProvider, IPoolProvider poolProvider, Transform uiRoot, ProviderBase provider)
         {
             _config = config;
+            _uiConfig = uiConfig;
             _resourceProvider = resourceProvider;
             _poolProvider = poolProvider;
             _uiRoot = uiRoot;
@@ -1237,7 +1259,14 @@ namespace JulyCore.Provider.UI
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 9999;
 
-            containerObj.AddComponent<CanvasScaler>();
+            var scaler = containerObj.AddComponent<CanvasScaler>();
+            if (_uiConfig != null)
+            {
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.referenceResolution = _uiConfig.DesignResolution;
+                scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+                scaler.matchWidthOrHeight = _uiConfig.ScreenMatchMode;
+            }
             containerObj.AddComponent<GraphicRaycaster>().enabled = false; // Tip 不接收射线
 
             // 设置 RectTransform

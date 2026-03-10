@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using JulyCore.Module.Task;
 using JulyCore.Provider.Resource;
 using UnityEngine;
@@ -19,6 +19,9 @@ namespace JulyCore.Core.Config
         // [Tooltip("配置的格式")]
         // public ConfigDataFormat ConfigDataFormat = ConfigDataFormat.Json;
         
+        [Header("UI 配置")]
+        public UIConfig UIConfig = new();
+        
         [Header("事件总线配置")]
         public EventBusConfig EventBusConfig = new();
         
@@ -33,6 +36,20 @@ namespace JulyCore.Core.Config
         public TipConfig TipConfig = new();
     }
     
+    /// <summary>
+    /// UI 配置
+    /// </summary>
+    [Serializable]
+    public class UIConfig
+    {
+        [Tooltip("设计分辨率")]
+        public Vector2 DesignResolution = new(1080, 1920);
+
+        [Tooltip("屏幕适配模式：0 = 宽度适配，1 = 高度适配，0~1 之间按比例混合")]
+        [Range(0f, 1f)]
+        public float ScreenMatchMode = 1f;
+    }
+
     /// <summary>
     /// Tip 配置
     /// </summary>
