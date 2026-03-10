@@ -70,7 +70,6 @@ namespace JulyCore.Module.Scene
                     _currentSceneName = activeScene.name;
                 }
 
-                Log($"[{Name}] 场景模块初始化完成，当前场景: {_currentSceneName ?? "无"}");
                 return base.OnInitAsync();
             }
             catch (Exception ex)
@@ -117,7 +116,6 @@ namespace JulyCore.Module.Scene
                     LoadMode = loadSceneMode
                 });
 
-                Log($"[{Name}] 场景 {sceneName} 加载完成");
                 return scene;
             }
             catch (Exception ex)
@@ -161,7 +159,6 @@ namespace JulyCore.Module.Scene
                     Success = success
                 });
 
-                Log($"[{Name}] 场景 {sceneName} 卸载{(success ? "成功" : "失败")}");
                 return success;
             }
             catch (Exception ex)
@@ -217,7 +214,6 @@ namespace JulyCore.Module.Scene
                     Scene = scene
                 });
 
-                Log($"[{Name}] 场景切换完成: {fromSceneName ?? "无"} -> {sceneName}");
                 return scene;
             }
             catch (Exception ex)
@@ -261,7 +257,6 @@ namespace JulyCore.Module.Scene
                     Scene = scene
                 });
 
-                Log($"[{Name}] 返回场景: {fromSceneName ?? "无"} -> {previousSceneName}");
                 return scene;
             }
             catch (Exception ex)
@@ -292,7 +287,6 @@ namespace JulyCore.Module.Scene
         internal void ClearSceneStack()
         {
             _sceneStack.Clear();
-            Log($"[{Name}] 场景栈已清空");
         }
 
         /// <summary>
@@ -307,7 +301,6 @@ namespace JulyCore.Module.Scene
             _eventBus = null;
             _currentSceneName = null;
 
-            Log($"[{Name}] 场景模块已关闭");
             await base.OnShutdownAsync();
         }
 

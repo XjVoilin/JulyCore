@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cysharp.Threading.Tasks;
@@ -29,7 +29,6 @@ namespace JulyCore.Provider.Task
 
         protected override UniTask OnInitAsync()
         {
-            Log($"[{Name}] 任务存储提供者初始化完成");
             return UniTask.CompletedTask;
         }
 
@@ -40,7 +39,6 @@ namespace JulyCore.Provider.Task
                 _storage.Clear();
                 _conditionIndex.Clear();
             }
-            Log($"[{Name}] 任务存储提供者已关闭");
             return UniTask.CompletedTask;
         }
 
@@ -281,8 +279,6 @@ namespace JulyCore.Provider.Task
                     }
                 }
             }
-
-            Log($"[{Name}] 导入任务数据完成，共 {saveData.Count} 条");
         }
 
         #endregion

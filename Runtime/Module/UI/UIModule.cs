@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -50,7 +50,6 @@ namespace JulyCore.Module.UI
                     throw new JulyException($"[{Name}] 未找到IUIProvider，请先注册UIProvider");
                 }
 
-                Log($"[{Name}] UI模块初始化完成");
                 return base.OnInitAsync();
             }
             catch (Exception ex)
@@ -294,7 +293,6 @@ namespace JulyCore.Module.UI
             {
                 var previousIdentifier = _uiStack.Last.Value;
                 _uiProvider.ShowUI(previousIdentifier);
-                Log($"[{Name}] 返回UI: {previousIdentifier.WindowName}");
             }
 
             return true;

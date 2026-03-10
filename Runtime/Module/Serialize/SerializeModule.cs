@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using JulyCore.Core;
@@ -32,7 +32,6 @@ namespace JulyCore.Module.Data
             {
                 // 获取数据提供者
                 _serializeProvider = GetProvider<ISerializeProvider>();
-                Log($"[{Name}] 获取数据提供者成功");
                 return base.OnInitAsync();
             }
             catch (Exception ex)
@@ -175,7 +174,6 @@ namespace JulyCore.Module.Data
             }
 
             _serializeProvider = null;
-            Log($"[{Name}] 数据模块已关闭");
         }
     }
 }

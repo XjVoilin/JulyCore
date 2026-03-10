@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cysharp.Threading.Tasks;
@@ -72,7 +72,6 @@ namespace JulyCore.Module.Task
             _resetScheduler?.RegisterScheduledResets(_timeCapability, type => ResetTasksByType(type));
             RegisterExpireCheck();
 
-            Log($"[{Name}] 任务模块初始化完成");
             await base.OnInitAsync();
         }
 
@@ -130,7 +129,6 @@ namespace JulyCore.Module.Task
             try
             {
                 handler.OnRegister();
-                Log($"[{Name}] Handler已注册并激活触发监听: {taskType} ({handler.GetType().Name})");
             }
             catch (Exception ex)
             {
@@ -154,7 +152,6 @@ namespace JulyCore.Module.Task
                     LogError($"[{Name}] Handler释放异常: {ex.Message}");
                 }
                 _typeHandlers.Remove(taskType);
-                Log($"[{Name}] Handler已注销: {taskType}");
             }
         }
 
@@ -337,7 +334,6 @@ namespace JulyCore.Module.Task
                 TaskData = task
             });
 
-            Log($"[{Name}] 任务 {taskId} 已解锁");
             return true;
         }
 
@@ -471,7 +467,6 @@ namespace JulyCore.Module.Task
                 });
 
                 PublishEvent(new TaskCompletedEvent { TaskId = task.TaskId, TaskData = task });
-                Log($"[{Name}] 任务 {task.TaskId} 已完成");
 
                 // 任务完成后自动检查并解锁后续任务
                 OnTaskCompleted(task.TaskId);
@@ -538,8 +533,6 @@ namespace JulyCore.Module.Task
                 TaskData = task
             });
 
-            Log($"[{Name}] 任务 {taskId} 奖励已领取");
-            
             TryUnlockAllTasks();
 
             return true;
@@ -580,7 +573,6 @@ namespace JulyCore.Module.Task
             task.State = TaskState.InProgress;
             _provider.Update(task);
 
-            Log($"[{Name}] 任务 {taskId} 已重置");
             return true;
         }
 
@@ -617,7 +609,6 @@ namespace JulyCore.Module.Task
             if (configTable?.Tasks == null) return;
             var taskDataList = configTable.ToTaskDataList(baseTime);
             _provider.StoreBatch(taskDataList);
-            Log($"[{Name}] 从配置表加载 {taskDataList.Count} 个任务");
         }
 
         #endregion
@@ -641,7 +632,6 @@ namespace JulyCore.Module.Task
             try
             {
                 handler.OnTaskUnlocked(taskData);
-                Log($"[{Name}] Handler已激活: {taskId} ({taskData.Type})");
             }
             catch (Exception ex)
             {
@@ -712,8 +702,6 @@ namespace JulyCore.Module.Task
                         NewState = TaskState.Expired,
                         TaskData = task
                     });
-
-                    Log($"[{Name}] 任务 {task.TaskId} 已过期");
                 }
             }
         }
@@ -792,7 +780,6 @@ namespace JulyCore.Module.Task
             _rewardHandler = null;
             _unlockCheckHandler = null;
             _resetScheduler = null;
-            Log($"[{Name}] 任务模块已关闭");
             return base.OnShutdownAsync();
         }
     }

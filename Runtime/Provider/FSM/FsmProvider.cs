@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using JulyCore.Core;
@@ -117,14 +117,12 @@ namespace JulyCore.Provider.Fsm
 
         protected override UniTask OnInitAsync()
         {
-            Log($"[{Name}] 状态机提供者初始化完成");
             return UniTask.CompletedTask;
         }
 
         protected override UniTask OnShutdownAsync()
         {
             DestroyAllFsms();
-            Log($"[{Name}] 状态机提供者已关闭");
             return UniTask.CompletedTask;
         }
 
@@ -149,7 +147,6 @@ namespace JulyCore.Provider.Fsm
                 _fsms.Add(fsm);
             }
 
-            Log($"[{Name}] 创建状态机: {typeof(object).Name} (初始状态: {defaulint})");
             return fsm;
         }
 
@@ -164,8 +161,6 @@ namespace JulyCore.Provider.Fsm
             {
                 _fsms.Remove(fsm);
             }
-
-            Log($"[{Name}] 销毁状态机: {typeof(object).Name}");
         }
 
         public void DestroyAllFsms()
@@ -174,8 +169,6 @@ namespace JulyCore.Provider.Fsm
             {
                 _fsms.Clear();
             }
-
-            Log($"[{Name}] 已销毁所有状态机");
         }
     }
 }

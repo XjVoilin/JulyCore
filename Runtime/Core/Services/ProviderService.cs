@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using Cysharp.Threading.Tasks;
 
@@ -28,7 +28,6 @@ namespace JulyCore.Core
                 if (!_providers.Contains(provider))
                 {
                     _providers.Add(provider);
-                    JLogger.Log($"{Frameworkconst.TagProviderService} 追踪 Provider: {provider.GetType().Name}");
                 }
             }
         }
@@ -42,7 +41,6 @@ namespace JulyCore.Core
             }
 
             var providers = GetProvidersSnapshot();
-            JLogger.Log($"{Frameworkconst.TagProviderService} 开始初始化 {providers.Length} 个 Provider");
 
             foreach (var provider in providers)
             {
@@ -53,7 +51,7 @@ namespace JulyCore.Core
             }
 
             IsInitialized = true;
-            JLogger.Log($"{Frameworkconst.TagProviderService} 所有 Provider 初始化完成");
+            JLogger.Log($"{Frameworkconst.TagProviderService} {providers.Length} 个 Provider 初始化完成");
         }
 
         public async UniTask ShutdownAllAsync()
@@ -61,9 +59,7 @@ namespace JulyCore.Core
             if (!IsInitialized) return;
 
             var providers = GetProvidersSnapshot();
-            JLogger.Log($"{Frameworkconst.TagProviderService} 开始关闭 {providers.Length} 个 Provider");
 
-            // 逆序关闭
             for (int i = providers.Length - 1; i >= 0; i--)
             {
                 var provider = providers[i];
@@ -74,7 +70,7 @@ namespace JulyCore.Core
             }
 
             IsInitialized = false;
-            JLogger.Log($"{Frameworkconst.TagProviderService} 所有 Provider 已关闭");
+            JLogger.Log($"{Frameworkconst.TagProviderService} {providers.Length} 个 Provider 已关闭");
         }
 
         public void Clear()
@@ -84,7 +80,6 @@ namespace JulyCore.Core
                 _providers.Clear();
             }
             IsInitialized = false;
-            JLogger.Log($"{Frameworkconst.TagProviderService} 已清空所有 Provider");
         }
 
         private IProvider[] GetProvidersSnapshot()

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
@@ -26,7 +26,6 @@ namespace JulyCore.Provider.Encryption
             try
             {
                 InitializeEncryption();
-                Log($"[{Name}] AES加密提供者初始化完成");
                 return UniTask.CompletedTask;
             }
             catch (Exception ex)

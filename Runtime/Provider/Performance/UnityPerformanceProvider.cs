@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -390,7 +390,6 @@ namespace JulyCore.Provider.Performance
                 // 写入文件
                 await System.IO.File.WriteAllTextAsync(filePath, json, cancellationToken);
                 
-                Log($"[{Name}] 性能数据已保存到: {filePath}");
                 return true;
             }
             catch (Exception ex)
@@ -416,7 +415,6 @@ namespace JulyCore.Provider.Performance
                 var json = await System.IO.File.ReadAllTextAsync(filePath, cancellationToken);
                 var snapshot = DeserializePerformanceSnapshot(json);
                 
-                Log($"[{Name}] 性能数据已从文件加载: {filePath}");
                 return snapshot;
             }
             catch (Exception ex)

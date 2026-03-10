@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cysharp.Threading.Tasks;
@@ -28,7 +28,6 @@ namespace JulyCore.Provider.ABTest
 
         protected override UniTask OnInitAsync()
         {
-            Log($"[{Name}] AB测试存储提供者初始化完成");
             return UniTask.CompletedTask;
         }
 
@@ -39,7 +38,6 @@ namespace JulyCore.Provider.ABTest
                 _experiments.Clear();
                 _assignments.Clear();
             }
-            Log($"[{Name}] AB测试存储提供者已关闭");
             return UniTask.CompletedTask;
         }
 
@@ -304,8 +302,6 @@ namespace JulyCore.Provider.ABTest
                     }
                 }
             }
-
-            Log($"[{Name}] 导入用户 {saveData.UserId} 的AB测试数据完成");
         }
 
         #endregion

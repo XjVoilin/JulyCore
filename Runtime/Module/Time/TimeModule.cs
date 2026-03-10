@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -100,7 +100,6 @@ namespace JulyCore.Module.Time
                     throw new JulyException($"[{Name}] 未找到ITimeProvider，请先注册TimeProvider");
                 }
 
-                Log($"[{Name}] 时间模块初始化完成");
                 return base.OnInitAsync();
             }
             catch (Exception ex)
@@ -174,8 +173,6 @@ namespace JulyCore.Module.Time
             // 更新Provider的技术层状态
             _timeProvider.SetServerTimeOffset(_serverTimeOffset);
             _timeProvider.SetServerTimeSynced(true);
-
-            Log($"[{Name}] 服务器时间已同步，偏移: {_serverTimeOffset:F3}秒");
         }
 
         /// <summary>
@@ -205,7 +202,6 @@ namespace JulyCore.Module.Time
                     {
                         // 业务规则：同步时间
                         SyncServerTime(ntpTime.Value);
-                        Log($"[{Name}] 从NTP服务器 {server} 同步时间成功");
                         return true;
                     }
                 }
@@ -315,8 +311,6 @@ namespace JulyCore.Module.Time
 
             // 清空活跃列表
             _activeTimerIds.Clear();
-
-            Log($"[{Name}] 已取消所有定时器 (共 {timerIds.Count} 个)");
         }
 
         /// <summary>

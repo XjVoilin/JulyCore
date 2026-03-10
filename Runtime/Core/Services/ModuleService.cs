@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -70,10 +70,7 @@ namespace JulyCore.Core
                 _cacheInvalid = true;
             }
 
-            // 自动注册 Module 实现的 Capability 接口到 DI 容器
             RegisterCapabilitiesToContainer(module);
-
-            JLogger.Log($"{Frameworkconst.TagModuleService} 注册模块: {moduleType.Name} (优先级: {module.Priority})");
         }
 
         /// <summary>
@@ -92,7 +89,6 @@ namespace JulyCore.Core
                 if (IsCapabilityInterface(interfaceType))
                 {
                     _container.RegisterSingleton(interfaceType, module);
-                    JLogger.Log($"{Frameworkconst.TagModuleService} 注册 Capability: {interfaceType.Name} -> {moduleType.Name}");
                 }
             }
         }
@@ -170,9 +166,7 @@ namespace JulyCore.Core
                 return;
             }
 
-            // 解析依赖并排序
             var modules = ResolveDependencies();
-            JLogger.Log($"{Frameworkconst.TagModuleService} 开始初始化 {modules.Count} 个Module");
 
             // 已成功初始化的模块（用于失败回滚）
             var initialized = new List<IModule>();
@@ -203,7 +197,7 @@ namespace JulyCore.Core
             }
 
             IsInitialized = true;
-            JLogger.Log($"{Frameworkconst.TagModuleService} 所有Module初始化完成");
+            JLogger.Log($"{Frameworkconst.TagModuleService} {modules.Count} 个 Module 初始化完成");
         }
 
         public async UniTask EnableAllAsync()
@@ -215,7 +209,6 @@ namespace JulyCore.Core
             }
 
             var modules = GetSnapshot();
-            JLogger.Log($"{Frameworkconst.TagModuleService} 开始启用 {modules.Length} 个Module");
 
             foreach (var module in modules)
             {
@@ -224,16 +217,12 @@ namespace JulyCore.Core
                     await module.EnableAsync();
                 }
             }
-
-            JLogger.Log($"{Frameworkconst.TagModuleService} 所有Module启用完成");
         }
 
         public async UniTask DisableAllAsync()
         {
             var modules = GetSnapshot();
-            JLogger.Log($"{Frameworkconst.TagModuleService} 开始禁用 {modules.Length} 个Module");
 
-            // 逆序禁用
             for (int i = modules.Length - 1; i >= 0; i--)
             {
                 if (modules[i].IsEnabled)
@@ -241,8 +230,6 @@ namespace JulyCore.Core
                     await modules[i].DisableAsync();
                 }
             }
-
-            JLogger.Log($"{Frameworkconst.TagModuleService} 所有Module禁用完成");
         }
 
         public async UniTask ShutdownAsync()
@@ -253,9 +240,7 @@ namespace JulyCore.Core
             }
 
             var modules = GetSnapshot();
-            JLogger.Log($"{Frameworkconst.TagModuleService} 开始关闭 {modules.Length} 个Module");
 
-            // 逆序关闭
             for (int i = modules.Length - 1; i >= 0; i--)
             {
                 if (modules[i].IsInitialized)
@@ -265,7 +250,7 @@ namespace JulyCore.Core
             }
 
             IsInitialized = false;
-            JLogger.Log($"{Frameworkconst.TagModuleService} 所有Module已关闭");
+            JLogger.Log($"{Frameworkconst.TagModuleService} {modules.Length} 个 Module 已关闭");
         }
 
         public void Update(float elapseSeconds, float realElapseSeconds)
@@ -311,7 +296,6 @@ namespace JulyCore.Core
 
             _moduleDic.Clear();
             IsInitialized = false;
-            JLogger.Log($"{Frameworkconst.TagModuleService} 已清空所有Module");
         }
 
         #endregion

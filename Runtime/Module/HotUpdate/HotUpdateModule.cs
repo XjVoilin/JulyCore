@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
@@ -134,7 +134,6 @@ namespace JulyCore.Module.HotUpdate
                     throw new JulyException($"[{Name}] 需要IHotUpdateProvider，请先注册IHotUpdateProvider");
                 }
 
-                Log($"[{Name}] 热更新模块初始化完成");
                 return base.OnInitAsync();
             }
             catch (Exception ex)
@@ -183,7 +182,6 @@ namespace JulyCore.Module.HotUpdate
                 if (result.IsSuccess)
                 {
                     SetState(HotUpdateState.Loaded);
-                    Log($"[{Name}] 热更新加载成功");
                 }
                 else
                 {
@@ -308,7 +306,6 @@ namespace JulyCore.Module.HotUpdate
             _state = HotUpdateState.NotLoaded;
             _lastResult = null;
             _config = null;
-            Log($"[{Name}] 热更新状态已重置");
         }
 
         #region 私有辅助方法
@@ -361,7 +358,6 @@ namespace JulyCore.Module.HotUpdate
             _lastResult = null;
             _state = HotUpdateState.NotLoaded;
 
-            Log($"[{Name}] 热更新模块已关闭");
             return base.OnShutdownAsync();
         }
     }

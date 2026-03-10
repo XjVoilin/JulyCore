@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using JulyCore.Core;
@@ -34,7 +34,6 @@ namespace JulyCore.Module.RedDot
         {
             _provider = GetProvider<IRedDotProvider>();
 
-            Log($"[{Name}] 红点模块初始化完成");
             return base.OnInitAsync();
         }
 
@@ -477,8 +476,6 @@ namespace JulyCore.Module.RedDot
             {
                 BindToSystem(kvp.Key, kvp.Value.ToArray());
             }
-
-            Log($"[{Name}] 从配置表加载 {registrations.Count} 个红点节点");
         }
 
         #endregion
@@ -517,7 +514,6 @@ namespace JulyCore.Module.RedDot
                 _calculators.Clear();
                 _systemToNodes.Clear();
             }
-            Log($"[{Name}] 红点模块已关闭");
             return base.OnShutdownAsync();
         }
     }

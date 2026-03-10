@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
@@ -181,14 +181,12 @@ namespace JulyCore.Provider.Pool
 
         protected override UniTask OnInitAsync()
         {
-            Log($"[{Name}] 对象池提供者初始化完成");
             return UniTask.CompletedTask;
         }
 
         protected override UniTask OnShutdownAsync()
         {
             DestroyAllPools();
-            Log($"[{Name}] 对象池提供者已关闭");
             return UniTask.CompletedTask;
         }
 
@@ -221,7 +219,6 @@ namespace JulyCore.Provider.Pool
             }
 
             _pools[key] = pool;
-            Log($"[{Name}] 创建对象池: {key} (初始大小: {initialSize}, 最大大小: {maxSize})");
             return pool;
         }
 
@@ -244,7 +241,6 @@ namespace JulyCore.Provider.Pool
                 {
                     typedPool.Clear();
                 }
-                Log($"[{Name}] 销毁对象池: {key}");
                 return true;
             }
             return false;
@@ -262,8 +258,6 @@ namespace JulyCore.Provider.Pool
                     objPool.Clear();
                 }
             }
-
-            Log($"[{Name}] 已销毁所有对象池 (共 {pools.Count} 个)");
         }
 
         public Dictionary<string, object> GetPoolStatistics()

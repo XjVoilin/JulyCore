@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -43,7 +43,6 @@ namespace JulyCore.Provider.Save
                 Directory.CreateDirectory(_backupRootPath);
             }
 
-            Log($"[{Name}] 本地文件存档Provider初始化完成，路径: {_saveRootPath}");
             return UniTask.CompletedTask;
         }
 
@@ -96,10 +95,6 @@ namespace JulyCore.Provider.Save
                 }
 
                 var data = ProcessAfterLoad<T>(rawBytes, key);
-                if (data != null)
-                {
-                    Log($"[{Name}] 加载成功: {key} ({rawBytes.Length} bytes)");
-                }
 
                 return data;
             }
@@ -128,7 +123,6 @@ namespace JulyCore.Provider.Save
                 if (File.Exists(filePath))
                 {
                     File.Delete(filePath);
-                    Log($"[{Name}] 删除成功: {key}");
                     return true;
                 }
 
@@ -219,7 +213,6 @@ namespace JulyCore.Provider.Save
 
                 var bytes = await File.ReadAllBytesAsync(backupPath, cancellationToken);
                 await File.WriteAllBytesAsync(filePath, bytes, cancellationToken);
-                Log($"[{Name}] 已恢复备份数据: {key}");
             }
             catch (Exception ex)
             {

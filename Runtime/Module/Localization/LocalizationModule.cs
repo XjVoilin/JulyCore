@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -63,7 +63,6 @@ namespace JulyCore.Module.Localization
                 // 加载当前语言包
                 await LoadLanguageAsync(_currentLanguage);
 
-                Log($"[{Name}] 多语言模块初始化完成，当前语言: {_currentLanguage}");
                 await base.OnInitAsync();
             }
             catch (Exception ex)
@@ -116,8 +115,6 @@ namespace JulyCore.Module.Localization
             // 更新业务状态
             var oldLanguage = _currentLanguage;
             _currentLanguage = languageCode;
-
-            Log($"[{Name}] 语言已切换: {oldLanguage} -> {languageCode}");
 
             // 发布业务事件
             try
@@ -329,7 +326,6 @@ namespace JulyCore.Module.Localization
         {
             _supportedLanguages.Clear();
             _localizationProvider = null;
-            Log($"[{Name}] 多语言模块已关闭");
             return base.OnShutdownAsync();
         }
     }

@@ -29,7 +29,6 @@ namespace JulyCore.Provider.Resource
 
         protected override UniTask OnInitAsync()
         {
-            Log($"[{Name}] Unity Resources 资源提供者初始化完成");
             return UniTask.CompletedTask;
         }
 
@@ -54,7 +53,6 @@ namespace JulyCore.Provider.Resource
             {
                 RecordResourceMapping(path, preloaded);
                 IncrementRefCount(preloaded);
-                Log($"[{Name}] 从预加载获取资源: {path}");
                 return preloaded;
             }
 
@@ -245,8 +243,6 @@ namespace JulyCore.Provider.Resource
                     {
                         Resources.UnloadAsset(obj);
                     }
-
-                    Log($"[{Name}] 资源已卸载: {path}");
                 }
             }
             catch (Exception ex)
@@ -266,8 +262,6 @@ namespace JulyCore.Provider.Resource
 
                 Resources.UnloadUnusedAssets();
                 GC.Collect();
-
-                Log($"[{Name}] 所有资源已卸载");
             }
             catch (Exception ex)
             {
@@ -319,7 +313,6 @@ namespace JulyCore.Provider.Resource
                 throw new JulyException($"[{Name}] 场景 {sceneName} 加载后无效");
             }
 
-            Log($"[{Name}] 场景 {sceneName} 加载完成");
             return scene;
         }
 
@@ -355,7 +348,6 @@ namespace JulyCore.Provider.Resource
                 await UniTask.Yield();
             }
 
-            Log($"[{Name}] 场景 {sceneName} 卸载完成");
             return true;
         }
 
@@ -371,7 +363,6 @@ namespace JulyCore.Provider.Resource
             UnloadAll();
             ResourceReleaseQueue.Clear();
 
-            Log($"[{Name}] Unity Resources 资源提供者已关闭");
             return UniTask.CompletedTask;
         }
 

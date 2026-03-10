@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using JulyCore.Core;
@@ -40,7 +40,6 @@ namespace JulyCore.Module.Pool
                     throw new JulyException($"[{Name}] 未找到IPoolProvider，请先注册PoolProvider");
                 }
 
-                Log($"[{Name}] 对象池模块初始化完成");
                 return base.OnInitAsync();
             }
             catch (Exception ex)
@@ -126,7 +125,6 @@ namespace JulyCore.Module.Pool
             }
 
             _poolProvider = null;
-            Log($"[{Name}] 对象池模块已关闭");
             return base.OnShutdownAsync();
         }
     }

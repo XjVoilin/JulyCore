@@ -28,7 +28,6 @@ namespace JulyCore.Module.Ad
             try
             {
                 _adProvider = GetProvider<IAdProvider>();
-                Log("广告模块初始化完成");
                 return base.OnInitAsync();
             }
             catch (Exception ex)
@@ -87,7 +86,6 @@ namespace JulyCore.Module.Ad
         protected override async UniTask OnShutdownAsync()
         {
             _adProvider = null;
-            Log("广告模块已关闭");
             await base.OnShutdownAsync();
         }
     }

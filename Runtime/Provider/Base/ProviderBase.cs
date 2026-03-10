@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using JulyCore.Core;
@@ -63,10 +63,8 @@ namespace JulyCore.Provider.Base
 
             try
             {
-                JLogger.Log($"[{Name}] 开始初始化 Provider");
                 await OnInitAsync();
                 _isInitialized = true;
-                JLogger.Log($"[{Name}] Provider 初始化完成");
             }
             catch (Exception ex)
             {
@@ -84,10 +82,8 @@ namespace JulyCore.Provider.Base
 
             try
             {
-                JLogger.Log($"[{Name}] 开始关闭 Provider");
                 await OnShutdownAsync();
                 _isInitialized = false;
-                JLogger.Log($"[{Name}] Provider 关闭完成");
             }
             catch (Exception ex)
             {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -55,7 +55,6 @@ namespace JulyCore.Provider.Audio
             _audioSourcePool = _poolProvider.CreatePool(CreateAudioSource, OnGetAudioSource, OnReturnAudioSource,
                 OnDestroyAudioSource, AudioSourcePoolInitialSize, AudioSourcePoolMaxSize);
 
-            Log($"[{Name}] Unity音效提供者初始化完成");
             return UniTask.CompletedTask;
         }
 
@@ -80,7 +79,6 @@ namespace JulyCore.Provider.Audio
             _resourceProvider = null;
             _poolProvider = null;
 
-            Log($"[{Name}] Unity音效提供者已关闭");
             return UniTask.CompletedTask;
         }
 

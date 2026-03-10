@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -46,7 +46,6 @@ namespace JulyCore.Module.Performance
                     throw new JulyException($"[{Name}] 未找到IPerformanceProvider，请先注册PerformanceProvider");
                 }
 
-                Log($"[{Name}] 性能监控模块初始化完成");
                 return base.OnInitAsync();
             }
             catch (Exception ex)
