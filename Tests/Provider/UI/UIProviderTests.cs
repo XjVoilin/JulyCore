@@ -6,6 +6,7 @@ using Cysharp.Threading.Tasks;
 using JulyCore.Core;
 using JulyCore.Data.UI;
 using JulyCore.Provider.Base;
+using JulyCore.Provider.Performance;
 using JulyCore.Provider.Resource;
 using JulyCore.Provider.UI;
 using JulyCore.Provider.UI.Animation;
@@ -232,31 +233,6 @@ namespace JulyGF.Tests.Provider.UI
             }
 
             public ResourceStatistics GetStatistics()
-            {
-                throw new NotImplementedException();
-            }
-
-            public List<ResourceLeakInfo> DetectLeaks(int leakThreshold = 10)
-            {
-                throw new NotImplementedException();
-            }
-
-            public List<ActiveHandleInfo> GetActiveHandles()
-            {
-                throw new NotImplementedException();
-            }
-
-            public List<ResourceInfo> GetAllResources()
-            {
-                throw new NotImplementedException();
-            }
-
-            public List<ResourceUsageHistory> GetResourceUsageHistory(string location = null, int maxCount = 100)
-            {
-                throw new NotImplementedException();
-            }
-
-            public List<ResourceUsageFrequency> GetResourceUsageFrequency(int topN = 20)
             {
                 throw new NotImplementedException();
             }

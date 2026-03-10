@@ -1,10 +1,39 @@
 using System;
 using JulyCore.Module.Task;
-using JulyCore.Provider.Resource;
 using UnityEngine;
 
 namespace JulyCore.Core.Config
 {
+    /// <summary>
+    /// 资源系统运行模式
+    /// </summary>
+    public enum JPlayMode
+    {
+        /// <summary>
+        /// 编辑器下的模拟模式
+        /// </summary>
+        EditorSimulateMode,
+
+        /// <summary>
+        /// 离线运行模式
+        /// </summary>
+        OfflinePlayMode,
+
+        /// <summary>
+        /// 联机运行模式
+        /// </summary>
+        HostPlayMode,
+
+        /// <summary>
+        /// WebGL运行模式
+        /// </summary>
+        WebPlayMode,
+
+        /// <summary>
+        /// 自定义运行模式
+        /// </summary>
+        CustomPlayMode,
+    }
     /// <summary>
     /// 框架配置 ScriptableObject
     /// 用于声明式配置 Provider 和 Module 的注册
