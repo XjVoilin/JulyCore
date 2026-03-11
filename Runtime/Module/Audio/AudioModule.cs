@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -211,6 +211,7 @@ namespace JulyCore.Module.Audio
             }
 
             _currentBgmHandle = handle;
+            ApplyMuteToBGM();
             return true;
         }
 
@@ -311,6 +312,9 @@ namespace JulyCore.Module.Audio
                 BaseVolume = techOptions.Volume
             };
 
+            if (_masterMute || _sfxMute)
+                _audioProvider.SetMute(handle, true);
+
             return handle;
         }
 
@@ -353,6 +357,9 @@ namespace JulyCore.Module.Audio
                 Group = options.Group,
                 BaseVolume = techOptions.Volume
             };
+
+            if (_masterMute || _sfxMute)
+                _audioProvider.SetMute(handle, true);
 
             return handle;
         }
