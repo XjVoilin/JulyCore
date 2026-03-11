@@ -37,12 +37,14 @@ namespace JulyCore.Core
         Analytics = 1 << 16,
         HotUpdate = 1 << 17,
         
+        // SDK
+        Platform = 1 << 18,
+        
         // 其它
-        Scene = 1 << 18,
-        Fsm = 1 << 19,
-        Combat = 1 << 20,
-        Encryption = 1 << 21,
-        Ad = 1 << 22,
+        Scene = 1 << 24,
+        Fsm = 1 << 25,
+        Combat = 1 << 26,
+        Encryption = 1 << 27,
         
         /// <summary>
         /// 启用所有通道

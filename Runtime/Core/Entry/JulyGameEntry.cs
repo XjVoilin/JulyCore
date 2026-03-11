@@ -30,15 +30,15 @@ using JulyCore.Provider.ABTest;
 using JulyCore.Provider.Guide;
 using JulyCore.Module.Guide;
 using JulyCore.Core.Config;
-using JulyCore.Module.Ad;
 using JulyCore.Module.Activity;
 using JulyCore.Module.Config;
 using JulyCore.Module.Fsm;
+using JulyCore.Module.Platform;
 using JulyCore.Module.Scene;
-using JulyCore.Provider.Ad;
 using JulyCore.Provider.Activity;
 using JulyCore.Provider.Config;
 using JulyCore.Provider.Fsm;
+using JulyCore.Provider.Platform;
 using JulyCore.Provider.Scene;
 using UnityEngine;
 
@@ -121,8 +121,8 @@ namespace JulyCore.Core
             RegisterProviderType<IPerformanceProvider, UnityPerformanceProvider>();
             RegisterProviderType<IFsmProvider, FsmProvider>();
             
-            // === 广告 Provider（独立，无框架内依赖）===
-            RegisterProviderType<IAdProvider, NullAdProvider>();
+            // === 平台 SDK Provider ===
+            RegisterProviderType<IPlatformProvider, NullPlatformProvider>();
             
             // === 第二层：依赖第一层 Provider ===
             RegisterProviderType<IUIProvider, UIProvider>();
@@ -208,7 +208,7 @@ namespace JulyCore.Core
             moduleService.RegisterModule<PerformanceModule>();
             moduleService.RegisterModule<SceneModule>();
             moduleService.RegisterModule<SaveModule>();
-            moduleService.RegisterModule<AdModule>();
+            moduleService.RegisterModule<PlatformModule>();
             moduleService.RegisterModule<AudioModule>();
             moduleService.RegisterModule<ConfigModule>();
             moduleService.RegisterModule<AnalyticsModule>();

@@ -4,7 +4,7 @@ using UnityEngine.Events;
 using UnityEngine.EventSystems;
 
 [DisallowMultipleComponent]
-public class SmartButton : MonoBehaviour,
+public class UISmartButton : MonoBehaviour,
     IPointerClickHandler,
     IPointerDownHandler,
     IPointerUpHandler,

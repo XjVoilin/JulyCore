@@ -1260,8 +1260,8 @@ namespace JulyCore.Provider.UI
         private bool _isInitialized;
 
         // 使用框架对象池
-        private IObjectPool<TipItem> _tipPool;
-        private readonly List<TipItem> _activeTips = new();
+        private IObjectPool<UITipItem> _tipPool;
+        private readonly List<UITipItem> _activeTips = new();
 
         public TipManager(TipConfig config, Core.Config.UIConfig uiConfig, IResourceProvider resourceProvider, IPoolProvider poolProvider, Transform uiRoot, ProviderBase provider)
         {
@@ -1340,18 +1340,18 @@ namespace JulyCore.Provider.UI
             );
         }
 
-        private TipItem CreateTipItem()
+        private UITipItem CreateTipItem()
         {
             var go = UnityEngine.Object.Instantiate(_tipPrefab, _tipContainer);
-            var tip = go.GetComponent<TipItem>();
+            var tip = go.GetComponent<UITipItem>();
             if (tip == null)
             {
-                tip = go.AddComponent<TipItem>();
+                tip = go.AddComponent<UITipItem>();
             }
             return tip;
         }
 
-        private void OnGetTip(TipItem tip)
+        private void OnGetTip(UITipItem tip)
         {
             if (tip != null)
             {
@@ -1360,7 +1360,7 @@ namespace JulyCore.Provider.UI
             }
         }
 
-        private void OnReturnTip(TipItem tip)
+        private void OnReturnTip(UITipItem tip)
         {
             if (tip != null)
             {
@@ -1369,7 +1369,7 @@ namespace JulyCore.Provider.UI
             }
         }
 
-        private void OnDestroyTip(TipItem tip)
+        private void OnDestroyTip(UITipItem tip)
         {
             if (tip != null)
             {
@@ -1418,7 +1418,7 @@ namespace JulyCore.Provider.UI
             }
         }
   
-        private void OnTipComplete(TipItem tip)
+        private void OnTipComplete(UITipItem tip)
         {
             _activeTips.Remove(tip);
             _tipPool?.Return(tip);

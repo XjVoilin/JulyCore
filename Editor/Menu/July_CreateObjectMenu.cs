@@ -26,7 +26,7 @@ namespace JulyGF.Editor.Menu
             image.color = DefaultButtonColor;
 
             // 添加 SmartButton 组件
-            buttonObj.AddComponent<SmartButton>();
+            buttonObj.AddComponent<UISmartButton>();
 
             // 设置按钮大小
             var buttonRect = buttonObj.GetComponent<RectTransform>();

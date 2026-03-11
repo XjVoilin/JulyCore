@@ -1,9 +1,8 @@
-﻿using JulyCore;
 using UnityEngine;
 using UnityEngine.UI;
 
 [DisallowMultipleComponent]
-public class UIGray : MonoBehaviour
+public class UIGrayscale : MonoBehaviour
 {
     [SerializeField] private bool _gray;
 
