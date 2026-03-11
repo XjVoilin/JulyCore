@@ -91,10 +91,7 @@ namespace JulyCore.Module.UI
             return ui;
         }
 
-        /// <summary>
-        /// 关闭UI（通过ID，业务层：处理栈管理）
-        /// </summary>
-        internal void Close(int id, bool destroy = false)
+        internal void Close(int id, bool destroy = true)
         {
             if (!_idToIdentifier.TryGetValue(id, out var identifier))
             {
@@ -102,45 +99,31 @@ namespace JulyCore.Module.UI
                 return;
             }
 
-            Close(identifier, destroy);
+            Close(identifier);
         }
 
-        /// <summary>
-        /// 关闭UI（通过WindowIdentifier，业务层：处理栈管理）
-        /// </summary>
-        internal void Close(WindowIdentifier identifier, bool destroy = false)
+        internal void Close(WindowIdentifier identifier, bool destroy = true)
         {
             EnsureProvider();
 
-            // 获取层级信息（用于事件发布）
             var layer = _openedUILayers.GetValueOrDefault(identifier, UILayer.Normal);
 
-            // 业务规则：从栈中移除
             RemoveFromStack(identifier);
-
-            // 业务层：移除映射
             _idToIdentifier.Remove(identifier.ID);
             _openedUILayers.Remove(identifier);
 
-            // 执行操作：通过Provider关闭UI
-            _uiProvider.Close(identifier, destroy);
-
-            // 通知外部：UI已关闭
-            PublishCloseEvent(identifier, layer, destroy);
+            _uiProvider.Close(identifier);
+            PublishCloseEvent(identifier, layer);
         }
 
-        /// <summary>
-        /// 关闭UI（通过UIBase实例，业务层：处理栈管理）
-        /// </summary>
-        internal void Close(UIBase ui, bool destroy = false)
+        internal void Close(UIBase ui, bool destroy = true)
         {
             if (ui == null) return;
 
-            // 通过遍历查找对应的 WindowIdentifier
             var identifier = FindIdentifierByInstanceId(ui.GetInstanceID());
             if (identifier != null)
             {
-                Close(identifier, destroy);
+                Close(identifier);
             }
             else
             {
@@ -148,10 +131,7 @@ namespace JulyCore.Module.UI
             }
         }
 
-        /// <summary>
-        /// 关闭UI（通过ID，异步版本）
-        /// </summary>
-        internal async UniTask CloseAsync(int id, bool destroy = false, CancellationToken cancellationToken = default)
+        internal async UniTask CloseAsync(int id, bool destroy = true, CancellationToken cancellationToken = default)
         {
             if (!_idToIdentifier.TryGetValue(id, out var identifier))
             {
@@ -159,44 +139,31 @@ namespace JulyCore.Module.UI
                 return;
             }
 
-            await CloseAsync(identifier, destroy, cancellationToken);
+            await CloseAsync(identifier, true, cancellationToken);
         }
 
-        /// <summary>
-        /// 关闭UI（通过WindowIdentifier，异步版本）
-        /// </summary>
-        internal async UniTask CloseAsync(WindowIdentifier identifier, bool destroy = false, CancellationToken cancellationToken = default)
+        internal async UniTask CloseAsync(WindowIdentifier identifier, bool destroy = true, CancellationToken cancellationToken = default)
         {
             EnsureProvider();
 
-            // 获取层级信息（用于事件发布）
             var layer = _openedUILayers.GetValueOrDefault(identifier, UILayer.Normal);
 
-            // 业务规则：从栈中移除
             RemoveFromStack(identifier);
-
-            // 业务层：移除映射
             _idToIdentifier.Remove(identifier.ID);
             _openedUILayers.Remove(identifier);
 
-            // 执行操作：通过Provider关闭UI（等待动画完成）
-            await _uiProvider.CloseAsync(identifier, destroy, cancellationToken);
-
-            // 通知外部：UI已关闭
-            PublishCloseEvent(identifier, layer, destroy);
+            await _uiProvider.CloseAsync(identifier, true, cancellationToken);
+            PublishCloseEvent(identifier, layer);
         }
 
-        /// <summary>
-        /// 关闭UI（通过UIBase实例，异步版本）
-        /// </summary>
-        internal async UniTask CloseAsync(UIBase ui, bool destroy = false, CancellationToken cancellationToken = default)
+        internal async UniTask CloseAsync(UIBase ui, bool destroy = true, CancellationToken cancellationToken = default)
         {
             if (ui == null) return;
 
             var identifier = FindIdentifierByInstanceId(ui.GetInstanceID());
             if (identifier != null)
             {
-                await CloseAsync(identifier, destroy, cancellationToken);
+                await CloseAsync(identifier, true, cancellationToken);
             }
             else
             {
@@ -204,36 +171,26 @@ namespace JulyCore.Module.UI
             }
         }
 
-        /// <summary>
-        /// 关闭所有UI（业务层：清空栈）
-        /// </summary>
-        internal void CloseAll(bool destroy = false)
+        internal void CloseAll(bool destroy = true)
         {
             EnsureProvider();
 
-            // 复制列表以避免在遍历时修改集合
             var identifiersToClose = _openedUILayers.Keys.ToList();
 
-            // 业务规则：清空栈和映射
             _uiStack.Clear();
             _idToIdentifier.Clear();
             _openedUILayers.Clear();
 
-            // 通过Provider关闭所有UI
             foreach (var identifier in identifiersToClose)
             {
-                _uiProvider.Close(identifier, destroy);
+                _uiProvider.Close(identifier);
             }
         }
 
-        /// <summary>
-        /// 关闭指定层级的所有UI（业务规则：层级管理）
-        /// </summary>
-        internal void CloseLayer(UILayer layer, bool destroy = false)
+        internal void CloseLayer(UILayer layer, bool destroy = true)
         {
             EnsureProvider();
 
-            // 查找指定层级的 UI
             var identifiersToClose = _openedUILayers
                 .Where(kvp => kvp.Value == layer)
                 .Select(kvp => kvp.Key)
@@ -241,7 +198,7 @@ namespace JulyCore.Module.UI
 
             foreach (var identifier in identifiersToClose)
             {
-                Close(identifier, destroy);
+                Close(identifier);
             }
         }
 
@@ -258,43 +215,18 @@ namespace JulyCore.Module.UI
         /// </summary>
         internal bool GoBack()
         {
-            EnsureProvider();
-
             if (_uiStack.Count == 0)
             {
                 return false;
             }
 
-            // 关闭当前UI（从栈尾移除）
             var lastNode = _uiStack.Last;
             if (lastNode == null)
             {
                 return false;
             }
 
-            var currentIdentifier = lastNode.Value;
-            _uiStack.RemoveLast();
-
-            // 获取层级信息
-            var layer = _openedUILayers.GetValueOrDefault(currentIdentifier, UILayer.Normal);
-
-            // 移除映射
-            _idToIdentifier.Remove(currentIdentifier.ID);
-            _openedUILayers.Remove(currentIdentifier);
-
-            // 执行操作：通过Provider关闭当前UI
-            _uiProvider.Close(currentIdentifier, destroy: false);
-
-            // 通知外部：UI已关闭
-            PublishCloseEvent(currentIdentifier, layer, false);
-
-            // 显示上一个UI
-            if (_uiStack.Count > 0)
-            {
-                var previousIdentifier = _uiStack.Last.Value;
-                _uiProvider.ShowUI(previousIdentifier);
-            }
-
+            Close(lastNode.Value);
             return true;
         }
 
@@ -382,7 +314,7 @@ namespace JulyCore.Module.UI
             }
         }
 
-        private void PublishCloseEvent(WindowIdentifier identifier, UILayer layer, bool isDestroyed)
+        private void PublishCloseEvent(WindowIdentifier identifier, UILayer layer)
         {
             try
             {
@@ -390,7 +322,7 @@ namespace JulyCore.Module.UI
                 {
                     Identifier = identifier,
                     Layer = layer,
-                    IsDestroyed = isDestroyed
+                    IsDestroyed = true
                 });
             }
             catch (Exception ex)
@@ -403,7 +335,7 @@ namespace JulyCore.Module.UI
 
         protected override UniTask OnShutdownAsync()
         {
-            CloseAll(destroy: true);
+            CloseAll();
             return base.OnShutdownAsync();
         }
     }

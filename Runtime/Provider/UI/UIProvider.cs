@@ -10,7 +10,6 @@ using JulyCore.Provider.Base;
 using JulyCore.Provider.Pool;
 using JulyCore.Provider.Resource;
 using JulyCore.Provider.UI.Animation;
-using JulyCore.Provider.UI.Pool;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -25,29 +24,17 @@ namespace JulyCore.Provider.UI
 
         public GameObject GameObject => UI?.gameObject;
 
-        /// <summary>
-        /// 窗口标识符（必须提供，用于唯一标识窗口）
-        /// </summary>
         public WindowIdentifier WindowIdentifier { get; set; }
 
-        /// <summary>
-        /// UI类型（用于资源路径解析和对象池管理）
-        /// </summary>
         public Type UIType { get; set; }
 
         public UILayer Layer { get; set; }
         public object Param { get; set; }
-        public GameObject Mask { get; set; }
 
-        // 缓存的组件引用（性能优化）
         public CanvasGroup CanvasGroup { get; set; }
 
-        // 关闭动画类型（从打开时的UIOpenOptions中保存）
         public UIAnimationType CloseAnimationType { get; set; } = UIAnimationType.None;
 
-        /// <summary>
-        /// UI是否有效（存在且已打开）
-        /// </summary>
         public bool IsValid => UI != null && UI.IsOpened;
 
         public void Visible(bool isShow)
@@ -62,30 +49,12 @@ namespace JulyCore.Provider.UI
             GameObject.SetActive(isShow);
         }
 
-        /// <summary>
-        /// 设置UI的交互状态（用于动画期间禁用/启用交互）
-        /// 同时控制窗口本身和遮罩层的交互状态
-        /// </summary>
-        /// <param name="interactable">是否可交互</param>
         public void SetInteractable(bool interactable)
         {
-            // 控制窗口本身的交互状态
             if (CanvasGroup != null)
             {
                 CanvasGroup.interactable = interactable;
                 CanvasGroup.blocksRaycasts = interactable;
-            }
-
-            // 控制遮罩层的交互状态（如果存在）
-            // 遮罩层在CreateMask时会自动添加CanvasGroup，确保统一管理
-            if (Mask != null)
-            {
-                var maskCanvasGroup = Mask.GetComponent<CanvasGroup>();
-                if (maskCanvasGroup != null)
-                {
-                    maskCanvasGroup.interactable = interactable;
-                    maskCanvasGroup.blocksRaycasts = interactable;
-                }
             }
         }
     }
@@ -123,7 +92,10 @@ namespace JulyCore.Provider.UI
         private readonly Dictionary<WindowIdentifier, UIInfo> _uiInfos = new Dictionary<WindowIdentifier, UIInfo>();
         private readonly Dictionary<int, WindowIdentifier> _idToIdentifier = new Dictionary<int, WindowIdentifier>();
         private readonly Dictionary<Type, GameObject> _preloadedPrefabs = new Dictionary<Type, GameObject>();
-        private readonly UIPool _uiPool = new UIPool(maxSizePerType: 5);
+
+        // 遮罩管理（全局单遮罩）
+        private readonly List<MaskRequest> _maskRequests = new List<MaskRequest>();
+        private GameObject _activeMask;
 
         // Tip 管理
         private TipManager _tipManager;
@@ -172,42 +144,14 @@ namespace JulyCore.Provider.UI
 
         public async UniTask<UIBase> OpenAsync(UIOpenOptions options, CancellationToken cancellationToken = default)
         {
-            // 参数验证
             ValidateOpenOptions(options);
 
             var windowIdentifier = options.WindowIdentifier;
-
-            // 通过WindowName自动解析UI类型
             var uiType = ResolveUIType(windowIdentifier.WindowName);
 
-            // 检查是否已存在
-            if (!TryGetUIInfo(windowIdentifier, out var existingInfo))
+            if (TryGetUIInfo(windowIdentifier, out var existingInfo))
             {
-                // 不存在，直接创建新实例
-                var newPrefab = await LoadWindowPrefab(uiType, cancellationToken);
-                return await CreateUIWindow(options, uiType, newPrefab, cancellationToken);
-            }
-
-            // 处理已存在的窗口
-            if (options.CloseExisting)
-            {
-                await CloseInternalAsync(existingInfo, true, UIAnimationType.None, cancellationToken);
-                // 关闭后继续创建新实例
-            }
-            else if (existingInfo.IsValid && existingInfo.UI != null)
-            {
-                // 已打开，直接返回并更新参数
-                if (options.Data != null)
-                {
-                    TrySetUIParam(existingInfo.UI, options.Data);
-                }
-                existingInfo.UI.Open();
-                return existingInfo.UI;
-            }
-            else if (existingInfo.UI != null)
-            {
-                // 存在但未打开，重新显示
-                return await ReopenExistingWindowAsync(existingInfo, options, cancellationToken);
+                await CloseInternalAsync(existingInfo, UIAnimationType.None, cancellationToken);
             }
 
             var prefab = await LoadWindowPrefab(uiType, cancellationToken);
@@ -270,99 +214,71 @@ namespace JulyCore.Provider.UI
             CancellationToken cancellationToken = default)
         {
             var windowIdentifier = options.WindowIdentifier;
-
-            // 实例化UI
             var layerRoot = GetOrCreateLayerRoot(options.Layer);
             UIBase component = null;
-            GameObject mask = null;
             try
             {
-                // 创建遮罩（如果需要）
-                if (options.ShowMask)
-                {
-                    mask = CreateMask(layerRoot, options.MaskColor, options.ClickMaskToClose, windowIdentifier);
-                }
+                var instance = UnityEngine.Object.Instantiate(prefab, layerRoot);
+                instance.transform.SetParent(layerRoot, false);
+                instance.name = windowIdentifier.WindowName;
+                component = instance.GetComponent(uiType) as UIBase;
 
-                // 尝试从对象池获取，如果池中没有则实例化
-                component = _uiPool.GetOrCreate(uiType, layerRoot);
                 if (component == null)
                 {
-                    var instance = UnityEngine.Object.Instantiate(prefab, layerRoot);
-                    instance.transform.SetParent(layerRoot, false);
-                    instance.name = windowIdentifier.WindowName;
-                    component = instance.GetComponent(uiType) as UIBase;
-                    
-                    if (component == null)
-                    {
-                        var msg = $"[{Name}] UI {uiType.Name} 预制体上未找到组件 {uiType.Name}";
-                        LogError(msg);
-                        CleanupOnError(mask, instance);
-                        throw new JulyException(msg);
-                    }
-                }
-                else
-                {
-                    component.gameObject.name = windowIdentifier.WindowName;
+                    var msg = $"[{Name}] UI {uiType.Name} 预制体上未找到组件 {uiType.Name}";
+                    LogError(msg);
+                    UnityEngine.Object.Destroy(instance);
+                    throw new JulyException(msg);
                 }
 
-                // 初始化并缓存组件（性能优化）
                 var uiInfo = InitializeUIInfo(component);
-
-                // 设置CanvasGroup初始状态（确保UI可见且可交互）
                 uiInfo.Visible(true);
 
-                // 传递参数
+                SetupUIInfo(uiInfo, options, uiType, windowIdentifier);
+                RegisterUI(windowIdentifier, uiInfo);
+
+                if (options.ShowMask)
+                {
+                    RequestMask(windowIdentifier, options.Layer, options.MaskColor, options.ClickMaskToClose);
+                }
+
                 if (options.Data != null)
                 {
                     TrySetUIParam(component, options.Data);
                 }
 
-                // 调用UI的OnBeforeOpen生命周期方法（在播放打开动画之前）
                 SafeCallOnBeforeOpen(component);
-
-                // 播放打开动画
                 await TryPlayOpenAnimationAsync(uiInfo, options.OpenAnimationType, cancellationToken);
 
-                // 设置UI信息
-                SetupUIInfo(uiInfo, options, mask, uiType, windowIdentifier);
-
-                // 保存到字典和映射
-                RegisterUI(windowIdentifier, uiInfo, uiType, prefab);
-
-                // 调用UI的OnOpen生命周期方法
                 component.Open();
-
                 return component;
             }
             catch (Exception)
             {
-                CleanupOnError(mask, component?.gameObject);
+                ReleaseMask(windowIdentifier);
+                if (component != null)
+                    UnityEngine.Object.Destroy(component.gameObject);
                 throw;
             }
         }
 
         /// <summary>
-        /// 关闭UI（通过WindowIdentifier，同步版本）
+        /// 关闭并销毁UI（通过WindowIdentifier，同步版本）
         /// </summary>
-        /// <param name="identifier">窗口标识符</param>
-        /// <param name="destroy">是否销毁</param>
-        public void Close(WindowIdentifier identifier, bool destroy = false)
+        public void Close(WindowIdentifier identifier, bool destroy = true)
         {
             if (identifier == null)
             {
                 throw new ArgumentNullException(nameof(identifier));
             }
 
-            CloseInternal(identifier, destroy, GetCloseAnimationType(identifier));
+            CloseInternal(identifier, GetCloseAnimationType(identifier));
         }
 
         /// <summary>
-        /// 关闭UI（通过WindowIdentifier，异步版本，等待动画完成）
+        /// 关闭并销毁UI（通过WindowIdentifier，异步版本，等待动画完成）
         /// </summary>
-        /// <param name="identifier">窗口标识符</param>
-        /// <param name="destroy">是否销毁</param>
-        /// <param name="cancellationToken">取消令牌</param>
-        public async UniTask CloseAsync(WindowIdentifier identifier, bool destroy = false,
+        public async UniTask CloseAsync(WindowIdentifier identifier, bool destroy = true,
             CancellationToken cancellationToken = default)
         {
             if (identifier == null)
@@ -370,23 +286,15 @@ namespace JulyCore.Provider.UI
                 throw new ArgumentNullException(nameof(identifier));
             }
 
-            await CloseInternalAsync(identifier, destroy, GetCloseAnimationType(identifier), cancellationToken);
+            await CloseInternalAsync(identifier, GetCloseAnimationType(identifier), cancellationToken);
         }
 
-        /// <summary>
-        /// 内部关闭方法（同步版本）
-        /// </summary>
-        private void CloseInternal(WindowIdentifier identifier, bool destroy, UIAnimationType animationType)
+        private void CloseInternal(WindowIdentifier identifier, UIAnimationType animationType)
         {
-            // 同步版本：使用fire-and-forget方式（不等待动画完成）
-            // None策略会立即完成，其他策略异步执行但不阻塞
-            CloseInternalAsync(identifier, destroy, animationType, CancellationToken.None).Forget();
+            CloseInternalAsync(identifier, animationType, CancellationToken.None).Forget();
         }
 
-        /// <summary>
-        /// 内部关闭方法（异步版本，等待动画完成）
-        /// </summary>
-        private async UniTask CloseInternalAsync(WindowIdentifier identifier, bool destroy,
+        private async UniTask CloseInternalAsync(WindowIdentifier identifier,
             UIAnimationType animationType,
             CancellationToken cancellationToken)
         {
@@ -396,103 +304,51 @@ namespace JulyCore.Provider.UI
                 return;
             }
 
-            await CloseInternalAsync(uiInfo, destroy, animationType, cancellationToken);
+            await CloseInternalAsync(uiInfo, animationType, cancellationToken);
         }
 
-        private async UniTask CloseInternalAsync(UIInfo uiInfo, bool destroy,
+        private async UniTask CloseInternalAsync(UIInfo uiInfo,
             UIAnimationType animationType,
             CancellationToken cancellationToken)
         {
             var identifier = uiInfo.WindowIdentifier;
-            // 检查UI是否有效，如果无效则直接清理字典记录
+
             if (!uiInfo.IsValid)
             {
                 LogWarning($"[{Name}] UI {identifier} 已无效（可能已被销毁），直接清理记录");
-                CloseInternalCore(identifier, destroy);
+                CloseInternalCore(identifier);
                 return;
             }
 
-            // 调用UI的OnClose生命周期方法（在播放关闭动画之前）
             SafeCallOnClose(uiInfo.UI);
-
-            // 总是播放关闭动画（None策略会立即完成）
             await TryPlayCloseAnimationAsync(uiInfo, animationType, cancellationToken);
-
-            // 调用UI的OnAfterClose生命周期方法（在播放关闭动画之后）
             SafeCallOnAfterClose(uiInfo.UI);
-
-            // 执行关闭核心逻辑
-            CloseInternalCore(identifier, destroy);
+            CloseInternalCore(identifier);
         }
 
-        /// <summary>
-        /// 关闭核心逻辑（不包含动画）
-        /// </summary>
-        private void CloseInternalCore(WindowIdentifier identifier, bool destroy)
+        private void CloseInternalCore(WindowIdentifier identifier)
         {
             if (!TryGetUIInfo(identifier, out var uiInfo))
             {
                 return;
             }
 
-            var ui = uiInfo.UI;
-            var uiType = uiInfo.UIType;
-
-            // 销毁遮罩
-            DestroyMask(uiInfo);
-
-            if (destroy)
-            {
-                DestroyUI(identifier, ui, uiType);
-            }
-            else
-            {
-                uiInfo.Visible(false);
-            }
-
-            // 从栈中移除（已移除，栈管理在Module层）
+            ReleaseMask(identifier);
+            DestroyUI(identifier, uiInfo.UI);
         }
 
-        /// <summary>
-        /// 销毁遮罩
-        /// </summary>
-        private void DestroyMask(UIInfo uiInfo)
+        private void DestroyUI(WindowIdentifier identifier, UIBase ui)
         {
-            if (uiInfo.Mask != null)
-            {
-                UnityEngine.Object.Destroy(uiInfo.Mask);
-                uiInfo.Mask = null;
-            }
-        }
-
-        /// <summary>
-        /// 销毁UI实例
-        /// </summary>
-        private void DestroyUI(WindowIdentifier identifier, UIBase ui, Type uiType)
-        {
-            // 从所有字典中移除
             _uiInfos.Remove(identifier);
-            
-            // 只有当该ID对应的identifier是当前identifier时才移除（避免ID冲突）
+
             if (_idToIdentifier.TryGetValue(identifier.ID, out var existingIdentifier) &&
                 existingIdentifier == identifier)
             {
                 _idToIdentifier.Remove(identifier.ID);
             }
 
-            if (ui == null)
+            if (ui != null)
             {
-                return;
-            }
-
-            if (uiType != null)
-            {
-                _uiPool.ReturnToPool(uiType, ui);
-                // 如果对象池已满，ReturnToPool方法内部会销毁，这里不需要额外处理
-            }
-            else
-            {
-                // 如果没有uiType，直接销毁
                 UnityEngine.Object.Destroy(ui.gameObject);
             }
         }
@@ -637,10 +493,14 @@ namespace JulyCore.Provider.UI
 
             _preloadedPrefabs.Clear();
 
-            // 清空对象池
-            _uiPool.ClearAllPools();
+            // 清理遮罩
+            _maskRequests.Clear();
+            if (_activeMask != null)
+            {
+                UnityEngine.Object.Destroy(_activeMask);
+                _activeMask = null;
+            }
 
-            // 清空所有字典（确保完全清理）
             _uiInfos.Clear();
             _idToIdentifier.Clear();
             _layerRoots.Clear();
@@ -705,9 +565,11 @@ namespace JulyCore.Provider.UI
             }
 
             var layerName = $"{LayerNamePrefix}{layer}";
-            var layerObj = new GameObject(layerName);
-            layerObj.layer = LayerMask.NameToLayer("UI");
-            
+            var layerObj = new GameObject(layerName)
+            {
+                layer = LayerMask.NameToLayer("UI")
+            };
+
             // 配置Canvas组件（使用 UI 相机）
             var canvas = layerObj.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceCamera;
@@ -728,93 +590,12 @@ namespace JulyCore.Provider.UI
         }
 
         /// <summary>
-        /// 重新打开已存在但未打开的窗口
-        /// </summary>
-        private async UniTask<UIBase> ReopenExistingWindowAsync(UIInfo uiInfo, UIOpenOptions options,
-            CancellationToken cancellationToken = default)
-        {
-            var windowIdentifier = options.WindowIdentifier;
-            var ui = uiInfo.UI;
-
-            // 确保窗口在正确的层级
-            EnsureCorrectLayer(ui, options.Layer);
-
-            // 设置可见
-            uiInfo.Visible(true);
-
-            // 创建遮罩（如果需要）
-            var mask = CreateOrUpdateMask(uiInfo, options, windowIdentifier);
-
-            // 更新参数
-            if (options.Data != null)
-            {
-                TrySetUIParam(ui, options.Data);
-            }
-
-            // 调用UI的OnBeforeOpen生命周期方法（在播放打开动画之前）
-            SafeCallOnBeforeOpen(ui);
-
-            // 播放打开动画
-            await TryPlayOpenAnimationAsync(uiInfo, options.OpenAnimationType, cancellationToken);
-
-            // 更新UI信息
-            UpdateUIInfo(uiInfo, options, mask);
-
-            // 调用UI的OnOpen生命周期方法
-            ui.Open();
-
-            return ui;
-        }
-
-        /// <summary>
-        /// 确保UI在正确的层级
-        /// </summary>
-        private void EnsureCorrectLayer(UIBase ui, UILayer layer)
-        {
-            var layerRoot = GetOrCreateLayerRoot(layer);
-            if (ui.gameObject.transform.parent != layerRoot)
-            {
-                ui.gameObject.transform.SetParent(layerRoot, false);
-            }
-        }
-
-        /// <summary>
-        /// 创建或更新遮罩
-        /// </summary>
-        private GameObject CreateOrUpdateMask(UIInfo uiInfo, UIOpenOptions options, WindowIdentifier identifier)
-        {
-            if (!options.ShowMask)
-            {
-                return null;
-            }
-
-            // 如果已有遮罩，先销毁
-            DestroyMask(uiInfo);
-
-            var layerRoot = GetOrCreateLayerRoot(options.Layer);
-            return CreateMask(layerRoot, options.MaskColor, options.ClickMaskToClose, identifier);
-        }
-
-        /// <summary>
-        /// 更新UI信息
-        /// </summary>
-        private void UpdateUIInfo(UIInfo uiInfo, UIOpenOptions options, GameObject mask)
-        {
-            uiInfo.Layer = options.Layer;
-            uiInfo.Param = options.Data;
-            uiInfo.Mask = mask;
-            uiInfo.CloseAnimationType = options.CloseAnimationType;
-        }
-
-
-        /// <summary>
         /// 设置UI信息
         /// </summary>
-        private void SetupUIInfo(UIInfo uiInfo, UIOpenOptions options, GameObject mask, Type uiType, WindowIdentifier windowIdentifier)
+        private void SetupUIInfo(UIInfo uiInfo, UIOpenOptions options, Type uiType, WindowIdentifier windowIdentifier)
         {
             uiInfo.Layer = options.Layer;
             uiInfo.Param = options.Data;
-            uiInfo.Mask = mask;
             uiInfo.CloseAnimationType = options.CloseAnimationType;
             uiInfo.UIType = uiType;
             uiInfo.WindowIdentifier = windowIdentifier;
@@ -823,24 +604,10 @@ namespace JulyCore.Provider.UI
         /// <summary>
         /// 注册UI到字典和映射
         /// </summary>
-        private void RegisterUI(WindowIdentifier windowIdentifier, UIInfo uiInfo, Type uiType, GameObject prefab)
+        private void RegisterUI(WindowIdentifier windowIdentifier, UIInfo uiInfo)
         {
-            // 保存到字典
             _uiInfos[windowIdentifier] = uiInfo;
-
-            // 保存ID到WindowIdentifier的映射（用于通过ID快速查找）
-            // 如果ID已存在且指向不同的WindowIdentifier，记录警告并覆盖（允许更新）
-            if (_idToIdentifier.TryGetValue(windowIdentifier.ID, out var existingIdentifier) &&
-                existingIdentifier != windowIdentifier)
-            {
-                LogWarning(
-                    $"[{Name}] 窗口ID {windowIdentifier.ID} 已存在，将覆盖旧的映射 (旧: {existingIdentifier}, 新: {windowIdentifier})");
-            }
-
             _idToIdentifier[windowIdentifier.ID] = windowIdentifier;
-
-            // 注册预制体到对象池（prefab已经验证不为null）
-            _uiPool.RegisterPrefab(uiType, prefab);
         }
 
 
@@ -957,45 +724,105 @@ namespace JulyCore.Provider.UI
             }
         }
 
+        #region 遮罩管理
+
+        private struct MaskRequest
+        {
+            public WindowIdentifier Identifier;
+            public UILayer Layer;
+            public Color Color;
+            public bool ClickToClose;
+        }
+
+        private void RequestMask(WindowIdentifier identifier, UILayer layer, Color color, bool clickToClose)
+        {
+            _maskRequests.Add(new MaskRequest
+            {
+                Identifier = identifier,
+                Layer = layer,
+                Color = color,
+                ClickToClose = clickToClose
+            });
+            RefreshMask();
+        }
+
+        private void ReleaseMask(WindowIdentifier identifier)
+        {
+            var removed = false;
+            for (var i = _maskRequests.Count - 1; i >= 0; i--)
+            {
+                if (_maskRequests[i].Identifier == identifier)
+                {
+                    _maskRequests.RemoveAt(i);
+                    removed = true;
+                    break;
+                }
+            }
+
+            if (removed)
+            {
+                RefreshMask();
+            }
+        }
+
         /// <summary>
-        /// 创建遮罩背景
+        /// 根据遮罩请求栈重建遮罩
+        /// 始终只保留一个遮罩，定位在最顶部请求遮罩的面板背后
         /// </summary>
-        private GameObject CreateMask(Transform parent, Color maskColor, bool clickToClose, WindowIdentifier identifier)
+        private void RefreshMask()
+        {
+            if (_activeMask != null)
+            {
+                UnityEngine.Object.Destroy(_activeMask);
+                _activeMask = null;
+            }
+
+            if (_maskRequests.Count == 0) return;
+
+            var top = _maskRequests[^1];
+
+            if (!TryGetUIInfo(top.Identifier, out var uiInfo) || uiInfo.UI == null) return;
+
+            var layerRoot = GetOrCreateLayerRoot(top.Layer);
+            _activeMask = CreateMaskGameObject(layerRoot, top.Color, top.ClickToClose, top.Identifier);
+
+            // 将遮罩放到面板的正后方（同层级，面板之前的兄弟位置）
+            var panelIndex = uiInfo.UI.transform.GetSiblingIndex();
+            _activeMask.transform.SetSiblingIndex(panelIndex);
+        }
+
+        private GameObject CreateMaskGameObject(Transform parent, Color maskColor, bool clickToClose,
+            WindowIdentifier identifier)
         {
             var maskObj = new GameObject(UIMaskName);
             maskObj.transform.SetParent(parent, false);
 
-            // 配置RectTransform为全屏
             var rectTransform = maskObj.AddComponent<RectTransform>();
             rectTransform.anchorMin = Vector2.zero;
             rectTransform.anchorMax = Vector2.one;
             rectTransform.sizeDelta = Vector2.zero;
             rectTransform.anchoredPosition = Vector2.zero;
 
-            // 添加CanvasGroup用于统一管理交互状态（与窗口保持一致）
-            var canvasGroup = maskObj.AddComponent<CanvasGroup>();
-            canvasGroup.interactable = true;
-            canvasGroup.blocksRaycasts = true;
-
-            // 添加Image组件作为遮罩
             var image = maskObj.AddComponent<Image>();
             image.color = maskColor;
 
-            // 如果支持点击关闭，添加Button组件
             if (clickToClose && identifier != null)
             {
                 var button = maskObj.AddComponent<Button>();
+                var id = identifier;
                 button.onClick.AddListener(() =>
                 {
-                    CloseInternal(identifier, destroy: false, GetCloseAnimationType(identifier));
+                    if (TryGetUIInfo(id, out var info) && info.IsValid)
+                    {
+                        GF.UI.Close(id.ID, true);
+                    }
                 });
             }
 
-            // 设置遮罩在最底层
-            maskObj.transform.SetAsFirstSibling();
-
             return maskObj;
         }
+
+        #endregion
 
         #region 辅助方法
 
@@ -1050,21 +877,7 @@ namespace JulyCore.Provider.UI
             return uiType;
         }
 
-        /// <summary>
-        /// 清理错误时的资源（增强健壮性）
-        /// </summary>
-        private void CleanupOnError(GameObject mask, GameObject uiInstance)
-        {
-            if (mask != null)
-            {
-                UnityEngine.Object.Destroy(mask);
-            }
 
-            if (uiInstance != null)
-            {
-                UnityEngine.Object.Destroy(uiInstance);
-            }
-        }
 
         /// <summary>
         /// 尝试获取UI信息（统一方法）
@@ -1140,43 +953,11 @@ namespace JulyCore.Provider.UI
             SafeCallUILifecycle(ui, u => u.BeforeOpen(), nameof(UIBase.BeforeOpen));
         }
 
-        /// <summary>
-        /// 显示UI（纯技术操作：设置UI可见并调用Open方法）
-        /// </summary>
-        /// <param name="identifier">窗口标识符</param>
         public void ShowUI(WindowIdentifier identifier)
         {
-            if (identifier == null)
-            {
-                LogWarning($"[{Name}] ShowUI: identifier为null");
-                return;
-            }
-
-            if (!TryGetUIInfo(identifier, out var uiInfo))
-            {
-                LogWarning($"[{Name}] ShowUI: 未找到UI {identifier}");
-                return;
-            }
-
-            if (uiInfo.UI == null)
-            {
-                LogWarning($"[{Name}] ShowUI: UI实例为null {identifier}");
-                return;
-            }
-
-            // 设置可见
-            uiInfo.Visible(true);
-
-            // 调用UI的Open方法（如果尚未打开）
-            if (!uiInfo.UI.IsOpened)
-            {
-                uiInfo.UI.Open();
-            }
+            LogWarning($"[{Name}] ShowUI 已废弃，关闭即销毁模式下不支持重新显示");
         }
 
-        /// <summary>
-        /// 安全调用UI的OnClose方法
-        /// </summary>
         private void SafeCallOnClose(UIBase ui)
         {
             SafeCallUILifecycle(ui, u => u.Close(), nameof(UIBase.Close));
@@ -1188,14 +969,6 @@ namespace JulyCore.Provider.UI
         private void SafeCallOnAfterClose(UIBase ui)
         {
             SafeCallUILifecycle(ui, u => u.AfterClose(), nameof(UIBase.AfterClose));
-        }
-
-        /// <summary>
-        /// 安全调用UI的OnOpen方法
-        /// </summary>
-        private void SafeCallOnOpen(UIBase ui)
-        {
-            SafeCallUILifecycle(ui, u => u.Open(), nameof(UIBase.Open));
         }
 
         #endregion
