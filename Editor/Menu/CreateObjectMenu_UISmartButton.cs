@@ -5,12 +5,12 @@ using UnityEngine.UI;
 
 namespace JulyGF.Editor.Menu
 {
-    public static class July_CreateObjectMenu
+    public static class CreateObjectMenu_UISmartButton
     {
         private static readonly Color DefaultButtonColor = new Color(1f, 1f, 1f, 1f);
         private static readonly Color DefaultTextColor = new Color(0.196f, 0.196f, 0.196f, 1f);
 
-        [MenuItem("GameObject/UI/SmartButton - TextMeshPro", false, 2031)]
+        [MenuItem("GameObject/UI/UISmartButton - TextMeshPro", false, 2031)]
         public static void AddSmartButton(MenuCommand menuCommand)
         {
             // 获取父对象（选中的对象或Canvas）
