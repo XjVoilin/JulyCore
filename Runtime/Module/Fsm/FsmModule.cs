@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using JulyCore.Core;
@@ -37,7 +37,6 @@ namespace JulyCore.Module.Fsm
                     throw new JulyException($"[{Name}] 未找到IFsmProvider，请先注册FsmProvider");
                 }
 
-                JLogger.Log($"[{Name}] 状态机模块初始化完成");
                 return base.OnInitAsync();
             }
             catch (Exception ex)
@@ -98,7 +97,6 @@ namespace JulyCore.Module.Fsm
             }
 
             _fsmProvider = null;
-            JLogger.Log($"[{Name}] 状态机模块已关闭");
             return base.OnShutdownAsync();
         }
     }

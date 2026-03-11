@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -277,10 +277,6 @@ namespace JulyCore.Provider.Save
             }
 
             var backupPath = await BackupSaveDataAsync(key, cancellationToken);
-            if (!string.IsNullOrEmpty(backupPath))
-            {
-                Log($"[{Name}] 已备份旧数据: {key}");
-            }
 
             Exception lastException = null;
             for (int attempt = 0; attempt < MaxRetryCount; attempt++)
@@ -297,7 +293,6 @@ namespace JulyCore.Provider.Save
                     if (success)
                     {
                         DeleteBackupAsync(backupPath);
-                        Log($"[{Name}] 保存成功: {key} (尝试 {attempt + 1}/{MaxRetryCount})");
                         return SaveResult.CreateSuccess();
                     }
                 }
@@ -415,7 +410,6 @@ namespace JulyCore.Provider.Save
                     LogWarning($"[{Name}] 存档数据已注册，将覆盖: {key}");
                 }
                 _registeredData[key] = data;
-                Log($"[{Name}] 注册存档数据: {key}, Importance: {data.Importance}");
             }
         }
 
@@ -432,12 +426,7 @@ namespace JulyCore.Provider.Save
             lock (_lock)
             {
                 _dirtyKeys.Remove(key);
-                var removed = _registeredData.Remove(key);
-                if (removed)
-                {
-                    Log($"[{Name}] 注销存档数据: {key}");
-                }
-                return removed;
+                return _registeredData.Remove(key);
             }
         }
 
@@ -686,7 +675,6 @@ namespace JulyCore.Provider.Save
                 }
             }
 
-            Log($"[{Name}] 批量保存完成: {results.Count(r => r.Value.Success)}/{keysToSave.Count} 成功");
             return results;
         }
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -65,7 +65,6 @@ namespace JulyCore.Module.Save
                 // 设置默认策略
                 _saveStrategy = new ImportanceBasedSaveStrategy();
 
-                Log($"[{Name}] 存档模块初始化完成，使用策略: {_saveStrategy.GetType().Name}");
                 return base.OnInitAsync();
             }
             catch (Exception ex)
@@ -88,7 +87,6 @@ namespace JulyCore.Module.Save
             }
 
             _saveStrategy = strategy;
-            Log($"[{Name}] 保存策略已设置: {_saveStrategy.GetType().Name}");
         }
 
         /// <summary>
@@ -113,16 +111,10 @@ namespace JulyCore.Module.Save
             var keysToSave = GetKeysToSave(signal);
             if (keysToSave.Count == 0)
             {
-                Log($"[{Name}] 触发保存信号 {signal}，无脏数据需要保存");
                 return new Dictionary<string, SaveResult>();
             }
 
-            Log($"[{Name}] 触发保存信号 {signal}，准备保存 {keysToSave.Count} 条数据");
-
             var results = await _saveProvider.SaveRegisteredAsync(keysToSave, GFCancellationToken);
-
-            var successCount = results.Count(r => r.Value.Success);
-            Log($"[{Name}] 保存信号 {signal} 处理完成，成功 {successCount}/{keysToSave.Count}");
             return results;
         }
 
@@ -172,7 +164,6 @@ namespace JulyCore.Module.Save
         {
             _lastAutoSaveTime = 0f;
             _isSaving = false;
-            Log($"[{Name}] 定时保存已启用，间隔: {AutoSaveInterval}秒");
             return base.OnEnableAsync();
         }
 
@@ -202,7 +193,6 @@ namespace JulyCore.Module.Save
 
             if (dirtyCount > 0)
             {
-                Log($"[{Name}] 关闭时兜底保存 {dirtyCount} 条脏数据");
                 await TriggerSaveAsync(SaveSignal.Immediate);
             }
 
@@ -343,7 +333,6 @@ namespace JulyCore.Module.Save
                 case SaveSignal.High:
                 case SaveSignal.Immediate:
                     // 立即触发保存
-                    Log($"[{Name}] 立即保存触发: {key} (Signal: {signal})");
                     var saveResults = await TriggerSaveAsync(signal);
                     return saveResults.TryGetValue(key, out var saveResult) && saveResult.Success;
 

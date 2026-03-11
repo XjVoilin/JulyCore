@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using JulyCore.Core;
 using JulyCore.Data.Guide;
@@ -35,7 +35,6 @@ namespace JulyCore.Provider.Guide
 
         protected override UniTask OnInitAsync()
         {
-            Log($"[{Name}] 引导存储提供者初始化完成");
             return UniTask.CompletedTask;
         }
 
@@ -50,7 +49,6 @@ namespace JulyCore.Provider.Guide
                 _currentFlowId = null;
                 _currentStepId = null;
             }
-            Log($"[{Name}] 引导存储提供者已关闭");
             return UniTask.CompletedTask;
         }
 
@@ -246,8 +244,6 @@ namespace JulyCore.Provider.Guide
                 _currentFlowId = data.currentFlowId;
                 _currentStepId = data.currentStepId;
             }
-
-            Log($"[{Name}] 导入引导进度完成，已完成流程: {_completedFlows.Count}，已完成步骤: {_completedSteps.Count}");
         }
 
         public void ClearProgress()
@@ -261,8 +257,6 @@ namespace JulyCore.Provider.Guide
                 _currentFlowId = null;
                 _currentStepId = null;
             }
-
-            Log($"[{Name}] 引导进度已清除");
         }
 
         #endregion

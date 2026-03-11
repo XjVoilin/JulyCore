@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using JulyCore.Core;
@@ -153,13 +153,9 @@ namespace JulyCore.Module.Base
 
             try
             {
-                // 缓存框架上下文
                 _context = FrameworkContext.Instance;
-
-                JLogger.Log($"[{Name}] 开始初始化Module");
                 await OnInitAsync();
                 _isInitialized = true;
-                JLogger.Log($"[{Name}] Module初始化完成");
             }
             catch (Exception ex)
             {
@@ -188,10 +184,8 @@ namespace JulyCore.Module.Base
 
             try
             {
-                JLogger.Log($"[{Name}] 开始启用Module");
                 await OnEnableAsync();
                 _isEnabled = true;
-                JLogger.Log($"[{Name}] Module启用完成");
             }
             catch (Exception ex)
             {
@@ -214,10 +208,8 @@ namespace JulyCore.Module.Base
 
             try
             {
-                JLogger.Log($"[{Name}] 开始禁用Module");
                 await OnDisableAsync();
                 _isEnabled = false;
-                JLogger.Log($"[{Name}] Module禁用完成");
             }
             catch (Exception ex)
             {
@@ -262,10 +254,8 @@ namespace JulyCore.Module.Base
                     await DisableAsync();
                 }
 
-                JLogger.Log($"[{Name}] 开始关闭Module");
                 await OnShutdownAsync();
                 _isInitialized = false;
-                JLogger.Log($"[{Name}] Module关闭完成");
             }
             catch (Exception ex)
             {
@@ -301,7 +291,6 @@ namespace JulyCore.Module.Base
 
                 OnDispose();
                 _isDisposed = true;
-                JLogger.Log($"[{Name}] Module已释放");
             }
             catch (Exception ex)
             {

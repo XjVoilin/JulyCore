@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cysharp.Threading.Tasks;
@@ -31,7 +31,6 @@ namespace JulyCore.Provider.RedDot
 
         protected override UniTask OnInitAsync()
         {
-            Log($"[{Name}] 红点存储提供者初始化完成");
             return UniTask.CompletedTask;
         }
 
@@ -41,7 +40,6 @@ namespace JulyCore.Provider.RedDot
             {
                 _storage.Clear();
             }
-            Log($"[{Name}] 红点存储提供者已关闭");
             return UniTask.CompletedTask;
         }
 
@@ -525,8 +523,6 @@ namespace JulyCore.Provider.RedDot
                     RecalculateInternal(root);
                 }
             }
-
-            Log($"[{Name}] 导入红点状态完成，共 {stateData.Count} 条");
         }
 
         #endregion

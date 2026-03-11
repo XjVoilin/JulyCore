@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -139,13 +139,11 @@ namespace JulyCore.Provider.Data
 
         protected override UniTask OnInitAsync()
         {
-            Log($"[{Name}] JSON数据提供者初始化完成");
             return UniTask.CompletedTask;
         }
 
         protected override UniTask OnShutdownAsync()
         {
-            Log($"[{Name}] JSON数据提供者已关闭");
             return UniTask.CompletedTask;
         }
 

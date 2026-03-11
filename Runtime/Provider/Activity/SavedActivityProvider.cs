@@ -1,4 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using JulyCore.Core;
 using JulyCore.Data.Activity;
 using JulyCore.Provider.Base;
@@ -29,8 +29,6 @@ namespace JulyCore.Provider.Activity
             _runtimeData = await _saveProvider.LoadAndRegisterAsync<ActivityRuntimeData>(
                 Frameworkconst.ActivitySaveKey,
                 CancellationToken);
-
-            Log("本地活动 Provider 初始化完成，数据已注册到存档系统");
         }
 
         protected override UniTask OnShutdownAsync()
@@ -107,7 +105,6 @@ namespace JulyCore.Provider.Activity
             if (changed)
             {
                 MarkDirtyInternal();
-                Log($"已清理活动数据: {activityId}");
             }
         }
 

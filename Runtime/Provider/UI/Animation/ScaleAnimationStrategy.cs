@@ -1,7 +1,6 @@
-﻿using System.Threading;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
-using JulyCore.Core;
 using JulyCore.Provider.UI;
 using UnityEngine;
 
@@ -39,8 +38,6 @@ namespace JulyCore.Provider.UI.Animation
                 .SetUpdate(true)
                 .SetAutoKill(true);
 
-            JLogger.Log("缩放动画");
-            
             // 等待动画完成，支持取消
             await tween.ToUniTask(cancellationToken: cancellationToken);
         }
@@ -63,8 +60,6 @@ namespace JulyCore.Provider.UI.Animation
                 .SetUpdate(true)
                 .SetAutoKill(true);
 
-            JLogger.Log("关闭缩放动画");
-            
             // 等待动画完成，支持取消
             await tween.ToUniTask(cancellationToken: cancellationToken);
         }

@@ -28,7 +28,6 @@ namespace JulyCore.Module.Resource
             try
             {
                 _resourceProvider = GetProvider<IResourceProvider>();
-                Log($"[{Name}] 资源模块初始化完成");
                 return base.OnInitAsync();
             }
             catch (Exception ex)
@@ -134,7 +133,6 @@ namespace JulyCore.Module.Resource
         protected override UniTask OnShutdownAsync()
         {
             _resourceProvider = null;
-            Log($"[{Name}] 资源模块已关闭");
             return base.OnShutdownAsync();
         }
     }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using JulyCore.Core;
@@ -60,8 +60,6 @@ namespace JulyCore.Module.Guide
             _saveProvider = GetProvider<ISaveProvider>();
 
             await LoadProgressInternal();
-
-            Log($"[{Name}] 引导模块初始化完成");
         }
 
         protected override async UniTask OnShutdownAsync()
@@ -88,8 +86,6 @@ namespace JulyCore.Module.Guide
             _dataProvider = null;
             _saveProvider = null;
             _progressData = null;
-
-            Log($"[{Name}] 引导模块已关闭");
         }
 
         #endregion
@@ -102,7 +98,6 @@ namespace JulyCore.Module.Guide
         internal void SetPresenter(IGuidePresenter presenter)
         {
             _presenter = presenter;
-            Log($"[{Name}] 表现适配器已设置: {presenter?.GetType().Name ?? "null"}");
         }
 
         /// <summary>
@@ -111,7 +106,6 @@ namespace JulyCore.Module.Guide
         internal void SetDataProvider(IGuideDataProvider provider)
         {
             _dataProvider = provider;
-            Log($"[{Name}] 数据提供器已设置: {provider?.GetType().Name ?? "null"}");
         }
 
         /// <summary>
@@ -137,7 +131,6 @@ namespace JulyCore.Module.Guide
             // 如果流程已完成，跳过注册
             if (_guideProvider.IsFlowCompleted(handler.FlowId))
             {
-                Log($"[{Name}] 流程已完成，跳过 Handler 注册: {handler.FlowId}");
                 handler.Dispose();
                 return false;
             }
@@ -162,7 +155,6 @@ namespace JulyCore.Module.Guide
             try
             {
                 handler.OnRegister();
-                Log($"[{Name}] Handler 已注册并激活触发监听: {handler.FlowId} ({handler.GetType().Name})");
             }
             catch (Exception ex)
             {
@@ -188,7 +180,6 @@ namespace JulyCore.Module.Guide
                     LogError($"[{Name}] Handler 释放异常: {ex.Message}");
                 }
                 _flowHandlers.Remove(flowId);
-                Log($"[{Name}] Handler 已注销: {flowId}");
             }
         }
 
@@ -217,7 +208,6 @@ namespace JulyCore.Module.Guide
             // 检查流程是否已完成
             if (_guideProvider.IsFlowCompleted(flowId))
             {
-                Log($"[{Name}] 流程已完成，跳过启动: {flowId}");
                 return false;
             }
 
@@ -270,8 +260,6 @@ namespace JulyCore.Module.Guide
 
             // 发布事件
             EventBus.Publish(new GuideFlowStartedEvent { FlowId = flowId });
-
-            Log($"[{Name}] 流程已启动: {flowId}");
 
             // 查找恢复点
             var resumeStepId = FindResumeStepId(flowId, flowData.EntryStepId);
@@ -334,8 +322,6 @@ namespace JulyCore.Module.Guide
 
             _presenter?.OnFlowStart(flowId);
             EventBus.Publish(new GuideFlowStartedEvent { FlowId = flowId });
-
-            Log($"[{Name}] 流程已恢复: {flowId}, 从步骤: {resumeStepId}");
 
             AdvanceToStep(flowId, resumeStepId);
             return true;
@@ -407,8 +393,6 @@ namespace JulyCore.Module.Guide
             EventBus.Publish(new GuideFlowCompletedEvent { FlowId = flowId });
 
             SaveProgressInternal().Forget();
-
-            Log($"[{Name}] 流程已跳过: {flowId}, 原因: {reason ?? "无"}");
         }
 
         /// <summary>
@@ -440,8 +424,6 @@ namespace JulyCore.Module.Guide
                 StepId = stepId,
                 Completed = true
             });
-
-            Log($"[{Name}] 步骤已完成: {flowId}/{stepId}");
 
             if (string.IsNullOrEmpty(stepData.NextStepId))
             {
@@ -483,8 +465,6 @@ namespace JulyCore.Module.Guide
                 Completed = false
             });
 
-            Log($"[{Name}] 步骤已跳过: {flowId}/{stepId}");
-
             if (string.IsNullOrEmpty(stepData.NextStepId))
             {
                 CompleteFlow(flowId);
@@ -515,7 +495,6 @@ namespace JulyCore.Module.Guide
             _progressData = null;
             _saveProvider.Unregister(SAVE_KEY);
             _saveProvider.Delete(SAVE_KEY);
-            Log($"[{Name}] 引导进度已清除");
         }
 
         #endregion
@@ -533,7 +512,6 @@ namespace JulyCore.Module.Guide
                 try
                 {
                     handler.OnFlowStart();
-                    Log($"[{Name}] Handler 已激活: {flowId}");
                 }
                 catch (Exception ex)
                 {
@@ -557,7 +535,6 @@ namespace JulyCore.Module.Guide
                 try
                 {
                     handler.Dispose();
-                    Log($"[{Name}] Handler 已释放: {flowId}");
                 }
                 catch (Exception ex)
                 {
@@ -579,7 +556,6 @@ namespace JulyCore.Module.Guide
                 if (_progressData != null && (_progressData.completedFlows?.Count > 0 || !string.IsNullOrEmpty(_progressData.currentFlowId)))
                 {
                     _guideProvider.ImportProgress(_progressData);
-                    Log($"[{Name}] 加载引导进度成功");
                 }
             }
             catch (Exception ex)
@@ -641,8 +617,6 @@ namespace JulyCore.Module.Guide
             EventBus.Publish(new GuideStepEnteredEvent { FlowId = flowId, StepId = stepId });
 
             SaveProgressInternal().Forget();
-
-            Log($"[{Name}] 进入步骤: {flowId}/{stepId}");
         }
 
         private void CompleteFlow(string flowId)
@@ -658,8 +632,6 @@ namespace JulyCore.Module.Guide
             EventBus.Publish(new GuideFlowCompletedEvent { FlowId = flowId });
 
             SaveProgressInternal().Forget();
-
-            Log($"[{Name}] 流程已完成: {flowId}");
         }
 
         #endregion

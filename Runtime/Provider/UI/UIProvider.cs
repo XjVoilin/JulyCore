@@ -191,14 +191,12 @@ namespace JulyCore.Provider.UI
             // 处理已存在的窗口
             if (options.CloseExisting)
             {
-                Log($"[{Name}] UI {windowIdentifier} 已存在，关闭旧实例");
                 await CloseInternalAsync(existingInfo, true, UIAnimationType.None, cancellationToken);
                 // 关闭后继续创建新实例
             }
             else if (existingInfo.IsValid && existingInfo.UI != null)
             {
                 // 已打开，直接返回并更新参数
-                Log($"[{Name}] UI {windowIdentifier} 已打开，直接返回");
                 if (options.Data != null)
                 {
                     TrySetUIParam(existingInfo.UI, options.Data);
@@ -209,7 +207,6 @@ namespace JulyCore.Provider.UI
             else if (existingInfo.UI != null)
             {
                 // 存在但未打开，重新显示
-                Log($"[{Name}] UI {windowIdentifier} 已存在但未打开，重新显示");
                 return await ReopenExistingWindowAsync(existingInfo, options, cancellationToken);
             }
 
@@ -228,7 +225,6 @@ namespace JulyCore.Provider.UI
             // 优先使用预加载的预制体
             if (_preloadedPrefabs.TryGetValue(uiType, out var preloadedPrefab) && preloadedPrefab != null)
             {
-                Log($"[{Name}] 使用预加载的UI: {uiType.Name}");
                 return preloadedPrefab;
             }
 
@@ -336,7 +332,6 @@ namespace JulyCore.Provider.UI
                 // 调用UI的OnOpen生命周期方法
                 component.Open();
 
-                Log($"[{Name}] UI {windowIdentifier} ({uiType.Name}) 打开成功 (层级: {options.Layer})");
                 return component;
             }
             catch (Exception)
@@ -500,8 +495,6 @@ namespace JulyCore.Provider.UI
                 // 如果没有uiType，直接销毁
                 UnityEngine.Object.Destroy(ui.gameObject);
             }
-
-            Log($"[{Name}] UI {identifier} 已销毁");
         }
 
 
@@ -549,7 +542,6 @@ namespace JulyCore.Provider.UI
             // 如果已预加载，直接返回
             if (_preloadedPrefabs.ContainsKey(uiType))
             {
-                Log($"[{Name}] UI {uiType.Name} 已预加载");
                 return true;
             }
 
@@ -560,7 +552,6 @@ namespace JulyCore.Provider.UI
                 if (prefab != null)
                 {
                     _preloadedPrefabs[uiType] = prefab;
-                    Log($"[{Name}] UI {uiType.Name} 预加载成功");
                     return true;
                 }
             }
@@ -597,10 +588,6 @@ namespace JulyCore.Provider.UI
             {
                 LogWarning($"[{Name}] 批量预加载完成，成功: {successCount}, 失败: {failCount}, 总计: {uiTypes.Length}");
             }
-            else
-            {
-                Log($"[{Name}] 批量预加载完成，共 {uiTypes.Length} 个UI");
-            }
         }
 
         /// <summary>
@@ -634,8 +621,6 @@ namespace JulyCore.Provider.UI
                 {
                     _resourceProvider.Unload(prefab);
                 }
-
-                Log($"[{Name}] 释放预加载UI: {uiType.Name}");
             }
         }
 
@@ -676,7 +661,6 @@ namespace JulyCore.Provider.UI
             if (existingRoot != null)
             {
                 _uiRoot = existingRoot.transform;
-                Log($"[{Name}] 使用场景中已有的UIRoot");
             }
             else
             {
@@ -686,7 +670,6 @@ namespace JulyCore.Provider.UI
                 rootObj.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
                 _uiRoot = rootObj.transform;
                 UnityEngine.Object.DontDestroyOnLoad(rootObj);
-                Log($"[{Name}] 创建UIRoot");
             }
 
             CreateUICamera();
@@ -712,8 +695,6 @@ namespace JulyCore.Provider.UI
             {
                 UnityEngine.Object.Destroy(audioListener);
             }
-
-            Log($"[{Name}] 创建UI相机 (depth: {_uiCamera.depth})");
         }
 
         private Transform GetOrCreateLayerRoot(UILayer layer)
@@ -743,7 +724,6 @@ namespace JulyCore.Provider.UI
             var result = layerObj.transform;
             _layerRoots[layer] = result;
 
-            Log($"[{Name}] 创建UI层级: {layerName} (排序: {(int)layer}), 父节点: {_uiRoot.name}");
             return result;
         }
 
@@ -783,7 +763,6 @@ namespace JulyCore.Provider.UI
             // 调用UI的OnOpen生命周期方法
             ui.Open();
 
-            Log($"[{Name}] UI {windowIdentifier} ({ui.GetType().Name}) 重新打开成功 (层级: {options.Layer})");
             return ui;
         }
 
@@ -878,7 +857,6 @@ namespace JulyCore.Provider.UI
             try
             {
                 ui.SetParam(param);
-                Log($"[{Name}] UI参数设置成功: {ui.GetType().Name}");
             }
             catch (Exception ex)
             {
@@ -1194,8 +1172,6 @@ namespace JulyCore.Provider.UI
             {
                 uiInfo.UI.Open();
             }
-
-            Log($"[{Name}] 显示UI: {identifier}");
         }
 
         /// <summary>

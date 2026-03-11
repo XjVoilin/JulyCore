@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -62,7 +62,6 @@ namespace JulyCore.Provider.Localization
                     var data = _serializeProvider.Deserialize<Dictionary<string, string>>(Encoding.UTF8.GetBytes(textAsset.text));
                     _languageDataDic[languageCode] = data;
                     _resourceProvider.Unload(textAsset);
-                    Log($"[{Name}] 语言包加载成功: {languageCode}");
                     return true;
                 }
 
@@ -89,10 +88,7 @@ namespace JulyCore.Provider.Localization
                 return;
             }
 
-            if (_languageDataDic.Remove(languageCode))
-            {
-                Log($"[{Name}] 语言包已卸载: {languageCode}");
-            }
+            _languageDataDic.Remove(languageCode);
         }
 
         public bool IsLanguageLoaded(string languageCode)
@@ -160,7 +156,6 @@ namespace JulyCore.Provider.Localization
         protected override UniTask OnShutdownAsync()
         {
             _languageDataDic.Clear();
-            Log($"[{Name}] 多语言提供者已关闭");
             return UniTask.CompletedTask;
         }
     }

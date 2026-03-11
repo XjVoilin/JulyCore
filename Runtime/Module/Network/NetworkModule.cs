@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -109,8 +109,6 @@ namespace JulyCore.Module.Network
                 _networkProvider.OnError += OnWebSocketError;
 
                 _config = new NetworkConfig();
-
-                Log($"[{Name}] 网络模块初始化完成");
             }
             catch (Exception ex)
             {
@@ -160,7 +158,6 @@ namespace JulyCore.Module.Network
             }
 
             _networkProvider = null;
-            Log($"[{Name}] 网络模块已关闭");
         }
 
         #endregion
@@ -774,8 +771,6 @@ namespace JulyCore.Module.Network
         /// </summary>
         private void OnWebSocketOpen(string connectionName)
         {
-            Log($"[{Name}] WebSocket连接已打开: {connectionName}");
-
             var info = _networkProvider?.GetConnectionInfo(connectionName);
             EventBus?.Publish(new WebSocketConnectedEvent
             {
@@ -795,8 +790,6 @@ namespace JulyCore.Module.Network
 
         private void OnWebSocketClose(string connectionName, int code, string reason)
         {
-            Log($"[{Name}] WebSocket连接已关闭: {connectionName}, Code: {code}, Reason: {reason}");
-
             var disconnectReason = code == 1000 ? DisconnectReason.Normal :
                                    code == 1001 ? DisconnectReason.ServerClosed :
                                    DisconnectReason.Unknown;
