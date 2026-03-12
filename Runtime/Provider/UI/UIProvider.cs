@@ -87,8 +87,9 @@ namespace JulyCore.Provider.UI
         private Transform _uiRoot;
         private Camera _uiCamera;
 
-        // 技术层数据存储（不包含业务逻辑）
+        // 技术层数据存储
         private readonly Dictionary<UILayer, Transform> _layerRoots = new Dictionary<UILayer, Transform>();
+        private readonly Dictionary<UILayer, Transform> _contentRoots = new Dictionary<UILayer, Transform>();
         private readonly Dictionary<WindowIdentifier, UIInfo> _uiInfos = new Dictionary<WindowIdentifier, UIInfo>();
         private readonly Dictionary<int, WindowIdentifier> _idToIdentifier = new Dictionary<int, WindowIdentifier>();
         private readonly Dictionary<Type, GameObject> _preloadedPrefabs = new Dictionary<Type, GameObject>();
@@ -214,12 +215,12 @@ namespace JulyCore.Provider.UI
             CancellationToken cancellationToken = default)
         {
             var windowIdentifier = options.WindowIdentifier;
-            var layerRoot = GetOrCreateLayerRoot(options.Layer);
+            var contentRoot = GetOrCreateContentRoot(options.Layer);
             UIBase component = null;
             try
             {
-                var instance = UnityEngine.Object.Instantiate(prefab, layerRoot);
-                instance.transform.SetParent(layerRoot, false);
+                var instance = UnityEngine.Object.Instantiate(prefab, contentRoot);
+                instance.transform.SetParent(contentRoot, false);
                 instance.name = windowIdentifier.WindowName;
                 component = instance.GetComponent(uiType) as UIBase;
 
@@ -503,6 +504,7 @@ namespace JulyCore.Provider.UI
 
             _uiInfos.Clear();
             _idToIdentifier.Clear();
+            _contentRoots.Clear();
             _layerRoots.Clear();
             _uiCamera = null;
             if (_uiRoot != null)
@@ -587,6 +589,35 @@ namespace JulyCore.Provider.UI
             _layerRoots[layer] = result;
 
             return result;
+        }
+
+        /// <summary>
+        /// 获取或创建 Layer 的内容根节点（带 SafeArea 适配）
+        /// 面板和遮罩都放在此节点下，保证兄弟排序正确
+        /// </summary>
+        private Transform GetOrCreateContentRoot(UILayer layer)
+        {
+            if (_contentRoots.TryGetValue(layer, out var root) && root != null)
+            {
+                return root;
+            }
+
+            var layerRoot = GetOrCreateLayerRoot(layer);
+
+            var safeAreaObj = new GameObject("SafeArea");
+            safeAreaObj.layer = LayerMask.NameToLayer("UI");
+            safeAreaObj.transform.SetParent(layerRoot, false);
+
+            var rect = safeAreaObj.AddComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            safeAreaObj.AddComponent<SafeAreaAdapter>();
+
+            _contentRoots[layer] = safeAreaObj.transform;
+            return safeAreaObj.transform;
         }
 
         /// <summary>
@@ -783,10 +814,8 @@ namespace JulyCore.Provider.UI
 
             if (!TryGetUIInfo(top.Identifier, out var uiInfo) || uiInfo.UI == null) return;
 
-            var layerRoot = GetOrCreateLayerRoot(top.Layer);
-            _activeMask = CreateMaskGameObject(layerRoot, top.Color, top.ClickToClose, top.Identifier);
-
-            // 将遮罩放到面板的正后方（同层级，面板之前的兄弟位置）
+            var contentRoot = GetOrCreateContentRoot(top.Layer);
+            _activeMask = CreateMaskGameObject(contentRoot, top.Color, top.ClickToClose, top.Identifier);
             var panelIndex = uiInfo.UI.transform.GetSiblingIndex();
             _activeMask.transform.SetSiblingIndex(panelIndex);
         }
@@ -798,9 +827,9 @@ namespace JulyCore.Provider.UI
             maskObj.transform.SetParent(parent, false);
 
             var rectTransform = maskObj.AddComponent<RectTransform>();
-            rectTransform.anchorMin = Vector2.zero;
-            rectTransform.anchorMax = Vector2.one;
-            rectTransform.sizeDelta = Vector2.zero;
+            rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+            rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            rectTransform.sizeDelta = new Vector2(5000, 5000);
             rectTransform.anchoredPosition = Vector2.zero;
 
             var image = maskObj.AddComponent<Image>();
