@@ -75,6 +75,13 @@ namespace JulyCore.Core
             {
                 _context = FrameworkContext._instance = new FrameworkContext(frameworkConfig);
                 
+                var shouldContinue = await OnPreLaunch();
+                if (!shouldContinue)
+                {
+                    JLogger.Log($"{Frameworkconst.TagJulyGameEntry} 框架启动被 OnPreLaunch 中止");
+                    return;
+                }
+                
                 // 初始化日志通道配置
                 JLogger.InitLogChannels(frameworkConfig.EnabledLogChannels);
                 
@@ -105,6 +112,13 @@ namespace JulyCore.Core
                 throw;
             }
         }
+        
+        /// <summary>
+        /// 框架启动前的预处理钩子。在任何 Provider/Module 注册和初始化之前调用。
+        /// 适用于：远程配置拉取、强制更新检查、日志级别设置等不依赖框架的操作。
+        /// 返回 true 继续启动框架，返回 false 中止启动（如需强制更新）。
+        /// </summary>
+        protected virtual UniTask<bool> OnPreLaunch() => UniTask.FromResult(true);
 
         /// <summary>
         /// 注册框架默认 Provider（仅注册类型，不立即解析）
