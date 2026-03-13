@@ -29,7 +29,8 @@ namespace JulyCore
             /// <summary>
             /// 异步加载资源
             /// </summary>
-            public static UniTask<T> LoadAsync<T>(string fileName, CancellationToken cancellationToken = default) where T : UnityEngine.Object
+            public static UniTask<T> LoadAsync<T>(string fileName, CancellationToken cancellationToken = default)
+                where T : UnityEngine.Object
             {
                 return Module.LoadAsync<T>(fileName, cancellationToken);
             }
@@ -49,7 +50,9 @@ namespace JulyCore
             /// handle.BindTo(gameObject);
             /// image.sprite = handle.Asset;
             /// </summary>
-            public static UniTask<ResourceHandle<T>> LoadWithHandleAsync<T>(string fileName, bool captureStackTrace = false, CancellationToken cancellationToken = default) where T : UnityEngine.Object
+            public static UniTask<ResourceHandle<T>> LoadWithHandleAsync<T>(string fileName,
+                bool captureStackTrace = false, CancellationToken cancellationToken = default)
+                where T : UnityEngine.Object
             {
                 return Module.LoadWithHandleAsync<T>(fileName, captureStackTrace, cancellationToken);
             }
@@ -61,7 +64,8 @@ namespace JulyCore
             /// <summary>
             /// 预加载资源（不增加引用计数，仅将资源加载到内存）
             /// </summary>
-            public static UniTask<bool> PreloadAsync<T>(string fileName, CancellationToken cancellationToken = default) where T : UnityEngine.Object
+            public static UniTask<bool> PreloadAsync<T>(string fileName, CancellationToken cancellationToken = default)
+                where T : UnityEngine.Object
             {
                 return Module.PreloadAsync<T>(fileName, cancellationToken);
             }
@@ -69,9 +73,23 @@ namespace JulyCore
             /// <summary>
             /// 批量加载资源
             /// </summary>
-            public static UniTask<List<T>> LoadBatchAsync<T>(IEnumerable<string> fileNames, CancellationToken cancellationToken = default) where T : UnityEngine.Object
+            public static UniTask<List<T>> LoadBatchAsync<T>(IEnumerable<string> fileNames,
+                CancellationToken cancellationToken = default) where T : UnityEngine.Object
             {
                 return Module.LoadBatchAsync<T>(fileNames, cancellationToken);
+            }
+
+            #endregion
+
+            #region 下载
+
+            /// <summary>
+            /// 批量加载资源
+            /// </summary>
+            public static UniTask<bool> DownloadByTagWithRetryAsync(string tag, int maxRetries = 3,
+                CancellationToken ct = default)
+            {
+                return Module.DownloadByTagWithRetryAsync(tag, maxRetries, ct);
             }
 
             #endregion
@@ -81,7 +99,8 @@ namespace JulyCore
             /// <summary>
             /// 加载子资源（如SpriteAtlas中的Sprite、AudioClip等）
             /// </summary>
-            public static UniTask<T> LoadSubAssetAsync<T>(string fileName, string assetName, CancellationToken cancellationToken = default) where T : UnityEngine.Object
+            public static UniTask<T> LoadSubAssetAsync<T>(string fileName, string assetName,
+                CancellationToken cancellationToken = default) where T : UnityEngine.Object
             {
                 return Module.LoadSubAssetAsync<T>(fileName, assetName, cancellationToken);
             }
@@ -89,7 +108,8 @@ namespace JulyCore
             /// <summary>
             /// 加载所有子资源
             /// </summary>
-            public static UniTask<List<T>> LoadAllSubAssetsAsync<T>(string fileName, CancellationToken cancellationToken = default) where T : UnityEngine.Object
+            public static UniTask<List<T>> LoadAllSubAssetsAsync<T>(string fileName,
+                CancellationToken cancellationToken = default) where T : UnityEngine.Object
             {
                 return Module.LoadAllSubAssetsAsync<T>(fileName, cancellationToken);
             }

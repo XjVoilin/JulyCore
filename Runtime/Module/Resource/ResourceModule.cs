@@ -5,7 +5,6 @@ using Cysharp.Threading.Tasks;
 using JulyCore.Core;
 using JulyCore.Module.Base;
 using JulyCore.Provider.Resource;
-using UnityEngine;
 
 namespace JulyCore.Module.Resource
 {
@@ -82,6 +81,16 @@ namespace JulyCore.Module.Resource
                 results.Add(resource);
             }
             return results;
+        }
+
+        #endregion
+
+        #region 下载
+
+        public UniTask<bool> DownloadByTagWithRetryAsync(string tag, int maxRetries = 3, CancellationToken ct = default)
+        {
+            EnsureProvider();
+            return _resourceProvider.DownloadByTagWithRetryAsync(tag, maxRetries, ct);
         }
 
         #endregion
