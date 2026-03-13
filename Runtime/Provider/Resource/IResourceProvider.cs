@@ -35,6 +35,12 @@ namespace JulyCore.Provider.Resource
         UniTask<List<T>> LoadAllSubAssetsAsync<T>(string fileName, CancellationToken cancellationToken = default) where T : Object;
 
         /// <summary>
+        /// 按 Tag 下载资源（含整体重试）。单次下载内部由 YooAsset 处理单文件重试，
+        /// 此方法在整体失败时按递增延迟重试整个下载批次。
+        /// </summary>
+        UniTask<bool> DownloadByTagWithRetryAsync(string tag, int maxRetries = 3, CancellationToken ct = default);
+
+        /// <summary>
         /// 检查资源是否存在
         /// </summary>
         bool HasAsset(string fileName);

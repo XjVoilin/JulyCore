@@ -196,6 +196,11 @@ namespace JulyCore.Provider.Resource
             }
         }
 
+        public UniTask<bool> DownloadByTagWithRetryAsync(string tag, int maxRetries = 3, CancellationToken ct = default)
+        {
+            return UniTask.FromResult(false);
+        }
+
         public bool HasAsset(string fileName)
         {
             if (string.IsNullOrEmpty(fileName))

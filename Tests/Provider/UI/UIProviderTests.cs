@@ -205,6 +205,11 @@ namespace JulyGF.Tests.Provider.UI
                 throw new NotImplementedException();
             }
 
+            public UniTask<bool> DownloadByTagWithRetryAsync(string tag, int maxRetries = 3, CancellationToken ct = default)
+            {
+                throw new NotImplementedException();
+            }
+
             public bool HasAsset(string fileName)
             {
                 throw new NotImplementedException();
