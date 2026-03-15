@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cysharp.Threading.Tasks;
@@ -12,7 +13,6 @@ namespace JulyCore.Core
     internal class ProviderService : IProviderService
     {
         private readonly List<IProvider> _providers = new();
-        private readonly object _lock = new();
 
         public bool IsInitialized { get; private set; }
 
@@ -23,35 +23,39 @@ namespace JulyCore.Core
         {
             if (provider == null) return;
 
-            lock (_lock)
+            if (!_providers.Contains(provider))
             {
-                if (!_providers.Contains(provider))
-                {
-                    _providers.Add(provider);
-                }
+                _providers.Add(provider);
             }
+        }
+
+        /// <summary>
+        /// 移除对 Provider 的生命周期追踪
+        /// </summary>
+        public void Untrack(IProvider provider)
+        {
+            if (provider == null) return;
+            _providers.Remove(provider);
         }
 
         public async UniTask InitAllAsync()
         {
-            if (IsInitialized)
-            {
-                JLogger.LogWarning($"{Frameworkconst.TagProviderService} Provider 已初始化，跳过");
-                return;
-            }
-
             var providers = GetProvidersSnapshot();
+            var newCount = 0;
 
             foreach (var provider in providers)
             {
                 if (!provider.IsInitialized)
                 {
                     await provider.InitAsync();
+                    newCount++;
                 }
             }
 
             IsInitialized = true;
-            JLogger.Log($"{Frameworkconst.TagProviderService} {providers.Length} 个 Provider 初始化完成");
+
+            if (newCount > 0)
+                JLogger.Log($"{Frameworkconst.TagProviderService} {newCount} 个 Provider 初始化完成");
         }
 
         public async UniTask ShutdownAllAsync()
@@ -65,7 +69,15 @@ namespace JulyCore.Core
                 var provider = providers[i];
                 if (provider.IsInitialized)
                 {
-                    await provider.ShutdownAsync();
+                    try
+                    {
+                        await provider.ShutdownAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        JLogger.LogError(
+                            $"{Frameworkconst.TagProviderService} Provider 关闭异常: {ex.Message}");
+                    }
                 }
             }
 
@@ -75,22 +87,15 @@ namespace JulyCore.Core
 
         public void Clear()
         {
-            lock (_lock)
-            {
-                _providers.Clear();
-            }
+            _providers.Clear();
             IsInitialized = false;
         }
 
         private IProvider[] GetProvidersSnapshot()
         {
-            lock (_lock)
-            {
-                // 按优先级排序
-                return _providers
-                    .OrderBy(p => p is IPriority priority ? priority.Priority : 0)
-                    .ToArray();
-            }
+            return _providers
+                .OrderBy(p => p is IPriority priority ? priority.Priority : 0)
+                .ToArray();
         }
     }
 }

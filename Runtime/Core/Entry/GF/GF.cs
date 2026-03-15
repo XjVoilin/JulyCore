@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using JulyCore.Core;
 using JulyCore.Module.Base;
 
@@ -10,7 +10,7 @@ namespace JulyCore
     /// </summary>
     public static partial class GF
     {
-        private static FrameworkContext _context = FrameworkContext.Instance;
+        private static FrameworkContext _context => FrameworkContext.Instance;
         
         /// <summary>
         /// 获取模块

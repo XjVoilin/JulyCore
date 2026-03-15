@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace JulyCore.Core
 {
@@ -44,6 +44,13 @@ namespace JulyCore.Core
         void RegisterSingleton<TInterface, TImplementation>() where TImplementation : class, TInterface;
 
         /// <summary>
+        /// 注册单例服务（非泛型版本，用于运行时动态注册实现类型）
+        /// </summary>
+        /// <param name="interfaceType">接口类型</param>
+        /// <param name="implementationType">实现类型（将通过构造函数注入自动创建）</param>
+        void RegisterSingleton(Type interfaceType, Type implementationType);
+
+        /// <summary>
         /// 解析服务
         /// </summary>
         /// <typeparam name="T">服务类型</typeparam>
@@ -64,6 +71,12 @@ namespace JulyCore.Core
         /// <param name="instance">输出的服务实例</param>
         /// <returns>是否解析成功</returns>
         bool TryResolve<T>(out T instance);
+
+        /// <summary>
+        /// 尝试获取已实例化的单例（不触发懒创建）。
+        /// 仅当单例已被 Resolve 过或以实例注册时返回 true。
+        /// </summary>
+        bool TryGetExistingSingleton<T>(out T instance);
 
         /// <summary>
         /// 检查服务是否已注册

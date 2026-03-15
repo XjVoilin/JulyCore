@@ -62,8 +62,9 @@ namespace JulyCore.Module.Save
             try
             {
                 _saveProvider = GetProvider<ISaveProvider>();
-                // 设置默认策略
                 _saveStrategy = new ImportanceBasedSaveStrategy();
+                _lastAutoSaveTime = 0f;
+                _isSaving = false;
 
                 return base.OnInitAsync();
             }
@@ -159,13 +160,6 @@ namespace JulyCore.Module.Save
         #endregion
 
         #region 生命周期管理
-
-        protected override UniTask OnEnableAsync()
-        {
-            _lastAutoSaveTime = 0f;
-            _isSaving = false;
-            return base.OnEnableAsync();
-        }
 
         protected override void OnUpdate(float elapseSeconds, float realElapseSeconds)
         {

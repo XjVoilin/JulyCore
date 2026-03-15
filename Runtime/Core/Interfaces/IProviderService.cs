@@ -1,4 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 
 namespace JulyCore.Core
 {
@@ -19,6 +19,12 @@ namespace JulyCore.Core
         /// </summary>
         /// <param name="provider">Provider 实例</param>
         void Track(IProvider provider);
+
+        /// <summary>
+        /// 移除对 Provider 的生命周期追踪（覆盖注册时调用）
+        /// </summary>
+        /// <param name="provider">Provider 实例</param>
+        void Untrack(IProvider provider);
 
         /// <summary>
         /// 初始化所有已追踪的 Provider

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -150,6 +150,23 @@ namespace JulyCore.Core
             };
         }
 
+        public void RegisterSingleton(Type interfaceType, Type implementationType)
+        {
+            if (interfaceType == null) throw new ArgumentNullException(nameof(interfaceType));
+            if (implementationType == null) throw new ArgumentNullException(nameof(implementationType));
+            if (!interfaceType.IsAssignableFrom(implementationType))
+                throw new ArgumentException(
+                    $"类型 {implementationType.Name} 未实现接口 {interfaceType.Name}");
+
+            WarnIfOverride(interfaceType, implementationType);
+
+            _registrations[interfaceType] = new ServiceRegistration
+            {
+                Lifetime = ServiceLifetime.Singleton,
+                ImplementationType = implementationType
+            };
+        }
+
         public T Resolve<T>()
         {
             var type = typeof(T);
@@ -199,6 +216,26 @@ namespace JulyCore.Core
                 JLogger.LogWarning($"{Frameworkconst.TagDependencyContainer} TryResolve<{type.Name}> 失败: {ex.Message}");
                 return false;
             }
+        }
+
+        public bool TryGetExistingSingleton<T>(out T instance)
+        {
+            instance = default!;
+            var type = typeof(T);
+
+            if (!_registrations.TryGetValue(type, out var registration))
+                return false;
+
+            if (registration.Lifetime != ServiceLifetime.Singleton || registration.Instance == null)
+                return false;
+
+            if (registration.Instance is T typed)
+            {
+                instance = typed;
+                return true;
+            }
+
+            return false;
         }
 
         public bool IsRegistered<T>()

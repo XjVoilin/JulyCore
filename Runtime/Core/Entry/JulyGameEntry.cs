@@ -36,6 +36,7 @@ using JulyCore.Module.Fsm;
 using JulyCore.Module.Platform;
 using JulyCore.Module.Scene;
 using JulyCore.Provider.Activity;
+using JulyCore.Provider.Analytics;
 using JulyCore.Provider.Config;
 using JulyCore.Provider.Fsm;
 using JulyCore.Provider.Platform;
@@ -46,7 +47,9 @@ namespace JulyCore.Core
 {
     /// <summary>
     /// 游戏入口基类
-    /// 负责框架的启动和生命周期管理
+    /// 负责框架的两阶段启动和生命周期管理：
+    /// Phase 1: 基础 Module/Provider — 热更前初始化，提供 GF 基础能力
+    /// Phase 2: 业务 Module/Provider — 热更后初始化，支持热更替换
     /// </summary>
     public abstract class JulyGameEntry : MonoBehaviour
     {
@@ -59,7 +62,6 @@ namespace JulyCore.Core
         
         private FrameworkContext _context;
         
-        // 记录所有注册的 Provider 接口类型（按注册顺序）
         private readonly List<System.Type> _registeredProviderTypes = new();
 
         private void Awake()
@@ -75,6 +77,7 @@ namespace JulyCore.Core
             {
                 _context = FrameworkContext._instance = new FrameworkContext(frameworkConfig);
                 
+                // Phase 0: 框架启动前的预处理（远程配置、强更检查等）
                 var shouldContinue = await OnPreLaunch();
                 if (!shouldContinue)
                 {
@@ -82,27 +85,25 @@ namespace JulyCore.Core
                     return;
                 }
                 
-                // 初始化日志通道配置
                 JLogger.InitLogChannels(frameworkConfig.EnabledLogChannels);
                 
-                // 【重要】先注册 Module（但不初始化）
-                // Module 注册时会将其实现的 Capability 接口注册到 DI 容器
-                // 这样 Provider 才能通过构造函数注入这些 Capability（如 ITimeCapability）
+                // Phase 1: 基础能力 — 注册并初始化基础 Module/Provider
                 var moduleService = _context.ModuleService;
-                RegisterDefaultModules(moduleService);
-                RegisterModules(moduleService);
+                RegisterDefaultBaseModules(moduleService);
                 
-                // 注册 Provider（通过 DI 容器，支持构造函数注入）
-                // 先注册默认 Provider，再注册用户自定义 Provider（用户 Provider 覆盖默认）
-                RegisterDefaultProviders();
-                RegisterProviders();
+                RegisterDefaultBaseProviders();
+                RegisterBaseProviders();
                 
-                // 所有注册完成后，统一解析并初始化 Provider
                 ResolveAllProviders();
-
-                await _context.InitAsync(_cancellationTokenSource.Token);
-                await InnerInit();
+                await _context.InitProvidersAsync(_cancellationTokenSource.Token);
+                await _context.InitModulesAsync();
+                
                 _isInit = true;
+                JLogger.Log($"{Frameworkconst.TagJulyGameEntry} 基础能力初始化完成，GF 基础 API 就绪");
+                
+                // Phase 2: 热更 + 业务能力（由 InnerInit 驱动）
+                await InnerInit();
+                
                 JLogger.Log($"{Frameworkconst.TagJulyGameEntry} 框架启动完成");
             }
             catch (System.Exception ex)
@@ -120,110 +121,86 @@ namespace JulyCore.Core
         /// </summary>
         protected virtual UniTask<bool> OnPreLaunch() => UniTask.FromResult(true);
 
+        #region Phase 1: 基础能力
+
         /// <summary>
-        /// 注册框架默认 Provider（仅注册类型，不立即解析）
+        /// 注册框架默认基础 Module（热更前初始化，提供核心能力）
         /// </summary>
-        private void RegisterDefaultProviders()
+        private void RegisterDefaultBaseModules(IModuleService moduleService)
         {
-            // === 第一层：无依赖的基础 Provider ===
+            moduleService.RegisterModule<ResourceModule>();
+            moduleService.RegisterModule<TimeModule>();
+            moduleService.RegisterModule<SerializeModule>();
+            moduleService.RegisterModule<FsmModule>();
+            moduleService.RegisterModule<PoolModule>();
+            moduleService.RegisterModule<PerformanceModule>();
+            moduleService.RegisterModule<SceneModule>();
+            moduleService.RegisterModule<PlatformModule>();
+        }
+
+        /// <summary>
+        /// 注册框架默认基础 Provider（热更前初始化）
+        /// </summary>
+        private void RegisterDefaultBaseProviders()
+        {
             RegisterProviderType<ISerializeProvider, JsonSerializeProvider>();
             RegisterProviderType<IEncryptionProvider, AesEncryptionProvider>();
             RegisterProviderType<IResourceProvider, UnityResourceProvider>();
             RegisterProviderType<IPoolProvider, PoolProvider>();
             RegisterProviderType<ITimeProvider, UnityTimeProvider>();
-            RegisterProviderType<IConfigProvider, ConfigProvider>();
             RegisterProviderType<IPerformanceProvider, UnityPerformanceProvider>();
             RegisterProviderType<IFsmProvider, FsmProvider>();
-            
-            // === 平台 SDK Provider ===
             RegisterProviderType<IPlatformProvider, NullPlatformProvider>();
+        }
+
+        /// <summary>
+        /// 注册项目自定义基础 Provider（子类重写，如 YooAsset、平台 SDK 等 AOT Provider）
+        /// </summary>
+        protected virtual void RegisterBaseProviders()
+        {
+        }
+
+        #endregion
+
+        #region Phase 2: 业务能力
+
+        /// <summary>
+        /// 注册框架默认业务 Module/Provider。
+        /// 供 GameEntryBase 在热更后、初始化前调用。
+        /// </summary>
+        protected void RegisterBusinessDefaults()
+        {
+            var moduleService = _context.ModuleService;
+            RegisterDefaultBusinessModules(moduleService);
+            RegisterBusinessModules(moduleService);
             
-            // === 第二层：依赖第一层 Provider ===
-            RegisterProviderType<IUIProvider, UIProvider>();
-            RegisterProviderType<IAudioProvider, UnityAudioProvider>();
-            RegisterProviderType<ISaveProvider, LocalFileSaveProvider>();
-            RegisterProviderType<ILocalizationProvider, LocalizationProvider>();
+            RegisterDefaultBusinessProviders();
+            RegisterBusinessProviders();
+        }
+
+        /// <summary>
+        /// 解析并初始化所有待处理的 Provider 和 Module。
+        /// 供 GameEntryBase 在热更注册器完成后调用。
+        /// 已初始化的 Provider/Module 会被自动跳过。
+        /// </summary>
+        protected async UniTask InitPendingAsync()
+        {
+            ResolveAllProviders();
+            await _context.InitProvidersAsync(_cancellationTokenSource.Token);
+            await _context.InitModulesAsync();
             
-            // === 第三层：独立的业务 Provider ===
-            RegisterProviderType<IABTestProvider, ABTestProvider>();
-            RegisterProviderType<ITaskProvider, TaskProvider>();
-            RegisterProviderType<IRedDotProvider, RedDotProvider>();
-            RegisterProviderType<IGuideProvider, GuideProvider>();
-            RegisterProviderType<IActivityProvider, SavedActivityProvider>();
+            JLogger.Log($"{Frameworkconst.TagJulyGameEntry} 业务能力初始化完成");
         }
 
         /// <summary>
-        /// 注册 Provider 类型（仅注册，不立即解析）
-        /// 用户自定义 Provider 会覆盖默认 Provider
+        /// 注册框架默认业务 Module（热更后初始化，支持热更替换 Provider）
         /// </summary>
-        protected void RegisterProvider<TInterface, TImplementation>()
-            where TInterface : IProvider
-            where TImplementation : class, TInterface
+        private void RegisterDefaultBusinessModules(IModuleService moduleService)
         {
-            RegisterProviderType<TInterface, TImplementation>();
-        }
-
-        /// <summary>
-        /// 内部方法：注册 Provider 类型到 DI 容器（仅注册，不解析）
-        /// </summary>
-        private void RegisterProviderType<TInterface, TImplementation>()
-            where TInterface : IProvider
-            where TImplementation : class, TInterface
-        {
-            var interfaceType = typeof(TInterface);
-            
-            // 记录接口类型（如果已存在则不重复添加，保持首次注册的顺序）
-            if (!_registeredProviderTypes.Contains(interfaceType))
-            {
-                _registeredProviderTypes.Add(interfaceType);
-            }
-            
-            _context.Container.RegisterSingleton<TInterface, TImplementation>();
-        }
-
-        /// <summary>
-        /// 解析所有已注册的 Provider 并追踪生命周期
-        /// 自动遍历所有注册过的 Provider 类型，无需手动维护列表
-        /// </summary>
-        private void ResolveAllProviders()
-        {
-            foreach (var interfaceType in _registeredProviderTypes)
-            {
-                var provider = _context.Container.Resolve(interfaceType) as IProvider;
-                if (provider != null)
-                {
-                    _context.ProviderService.Track(provider);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 注册自定义 Provider（子类重写）
-        /// 用户在此方法中注册的 Provider 会覆盖默认 Provider
-        /// </summary>
-        protected virtual void RegisterProviders()
-        {
-        }
-
-        /// <summary>
-        /// 注册框架默认 Module
-        /// </summary>
-        private void RegisterDefaultModules(IModuleService moduleService)
-        {
-            // moduleService.RegisterModule<HotUpdateModule>();
-            moduleService.RegisterModule<ResourceModule>();
-            moduleService.RegisterModule<TimeModule>();
             moduleService.RegisterModule<LocalizationModule>();
-            moduleService.RegisterModule<SerializeModule>();
-            moduleService.RegisterModule<FsmModule>();
-            // moduleService.RegisterModule<NetworkModule>();
-            moduleService.RegisterModule<PoolModule>();
             moduleService.RegisterModule<UIModule>();
-            moduleService.RegisterModule<PerformanceModule>();
-            moduleService.RegisterModule<SceneModule>();
-            moduleService.RegisterModule<SaveModule>();
-            moduleService.RegisterModule<PlatformModule>();
             moduleService.RegisterModule<AudioModule>();
+            moduleService.RegisterModule<SaveModule>();
             moduleService.RegisterModule<ConfigModule>();
             moduleService.RegisterModule<AnalyticsModule>();
             moduleService.RegisterModule<ABTestModule>();
@@ -234,11 +211,82 @@ namespace JulyCore.Core
         }
 
         /// <summary>
-        /// 注册自定义 Module（子类重写）
+        /// 注册框架默认业务 Provider（热更后初始化）
         /// </summary>
-        protected virtual void RegisterModules(IModuleService moduleService)
+        private void RegisterDefaultBusinessProviders()
+        {
+            RegisterProviderType<IAnalyticsProvider, NullAnalyticsProvider>();
+            RegisterProviderType<IConfigProvider, ConfigProvider>();
+            RegisterProviderType<IUIProvider, UIProvider>();
+            RegisterProviderType<IAudioProvider, UnityAudioProvider>();
+            RegisterProviderType<ISaveProvider, LocalFileSaveProvider>();
+            RegisterProviderType<ILocalizationProvider, LocalizationProvider>();
+            RegisterProviderType<IABTestProvider, ABTestProvider>();
+            RegisterProviderType<ITaskProvider, TaskProvider>();
+            RegisterProviderType<IRedDotProvider, RedDotProvider>();
+            RegisterProviderType<IGuideProvider, GuideProvider>();
+            RegisterProviderType<IActivityProvider, SavedActivityProvider>();
+        }
+
+        /// <summary>
+        /// 注册项目自定义业务 Module（子类重写）
+        /// </summary>
+        protected virtual void RegisterBusinessModules(IModuleService moduleService)
         {
         }
+
+        /// <summary>
+        /// 注册项目自定义业务 Provider（子类重写）
+        /// </summary>
+        protected virtual void RegisterBusinessProviders()
+        {
+        }
+
+        #endregion
+
+        #region Provider 注册工具
+
+        /// <summary>
+        /// 注册 Provider 类型（仅注册到 DI 容器，不立即解析）
+        /// </summary>
+        protected void RegisterProvider<TInterface, TImplementation>()
+            where TInterface : IProvider
+            where TImplementation : class, TInterface
+        {
+            RegisterProviderType<TInterface, TImplementation>();
+        }
+
+        private void RegisterProviderType<TInterface, TImplementation>()
+            where TInterface : IProvider
+            where TImplementation : class, TInterface
+        {
+            var interfaceType = typeof(TInterface);
+            
+            if (!_registeredProviderTypes.Contains(interfaceType))
+            {
+                _registeredProviderTypes.Add(interfaceType);
+            }
+            
+            _context.Container.RegisterSingleton<TInterface, TImplementation>();
+        }
+
+        /// <summary>
+        /// 解析所有已注册的 Provider 并追踪生命周期（Track 内部去重）
+        /// </summary>
+        private void ResolveAllProviders()
+        {
+            foreach (var interfaceType in _registeredProviderTypes)
+            {
+                if (_context.Container.Resolve(interfaceType) is IProvider provider)
+                {
+                    _context.ProviderService.Track(provider);
+                }
+            }
+        }
+
+        #endregion
+
+        #region 生命周期
 
         protected virtual void Update()
         {
@@ -273,9 +321,18 @@ namespace JulyCore.Core
         }
 
         /// <summary>
-        /// 初始化游戏逻辑
-        /// 子类实现具体的游戏初始化逻辑
+        /// 从 DI 容器解析已初始化的 Provider 实例
+        /// </summary>
+        protected T ResolveProvider<T>() where T : IProvider
+        {
+            return _context.Container.Resolve<T>();
+        }
+
+        /// <summary>
+        /// 初始化游戏逻辑（子类实现）
         /// </summary>
         protected abstract UniTask InnerInit();
+
+        #endregion
     }
 }

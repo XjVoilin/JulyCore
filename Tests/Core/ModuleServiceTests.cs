@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
@@ -159,28 +159,13 @@ namespace JulyGF.Tests.Core
         }
 
         [UnityTest]
-        public IEnumerator EnableAllAsync_InitializedModules_ShouldEnableAll()
+        public IEnumerator InitAllAsync_ShouldAutoEnable()
         {
             var module = new TestModule();
             _moduleService.RegisterModule(module);
             yield return _moduleService.InitAllAsync().ToCoroutine();
-
-            yield return _moduleService.EnableAllAsync().ToCoroutine();
 
             Assert.IsTrue(module.IsEnabled);
-        }
-
-        [UnityTest]
-        public IEnumerator DisableAllAsync_EnabledModules_ShouldDisableAll()
-        {
-            var module = new TestModule();
-            _moduleService.RegisterModule(module);
-            yield return _moduleService.InitAllAsync().ToCoroutine();
-            yield return _moduleService.EnableAllAsync().ToCoroutine();
-
-            yield return _moduleService.DisableAllAsync().ToCoroutine();
-
-            Assert.IsFalse(module.IsEnabled);
         }
 
         [UnityTest]
@@ -194,15 +179,15 @@ namespace JulyGF.Tests.Core
 
             Assert.IsFalse(_moduleService.IsInitialized);
             Assert.IsFalse(module.IsInitialized);
+            Assert.IsFalse(module.IsEnabled);
         }
 
         [UnityTest]
-        public IEnumerator Update_EnabledModule_ShouldCallUpdate()
+        public IEnumerator Update_InitializedModule_ShouldCallUpdate()
         {
             var module = new TestModule();
             _moduleService.RegisterModule(module);
             yield return _moduleService.InitAllAsync().ToCoroutine();
-            yield return _moduleService.EnableAllAsync().ToCoroutine();
 
             _moduleService.Update(0.1f, 0.1f);
 

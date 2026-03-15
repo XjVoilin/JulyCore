@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using Cysharp.Threading.Tasks;
 using JulyCore.Core;
@@ -55,14 +55,9 @@ namespace JulyCore.Module.Activity
             _provider = GetProvider<IActivityProvider>();
             _timeCapability = GetCapability<ITimeCapability>();
             _isReady = false;
+            _lastStateCheckTime = 0f;
             Log("活动模块初始化完成，等待业务层注册活动");
             return base.OnInitAsync();
-        }
-
-        protected override UniTask OnEnableAsync()
-        {
-            _lastStateCheckTime = 0f;
-            return base.OnEnableAsync();
         }
 
         protected override void OnUpdate(float elapseSeconds, float realElapseSeconds)

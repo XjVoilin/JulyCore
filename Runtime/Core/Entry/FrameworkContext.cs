@@ -1,4 +1,4 @@
-﻿using System.Threading;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using JulyCore.Core.Config;
 
@@ -65,9 +65,6 @@ namespace JulyCore.Core
             _moduleService = new ModuleService();
             _providerService = new ProviderService();
             _eventBus = new EventBus(_frameworkConfig.EventBusConfig);
-            
-            // 设置 ModuleService 的容器引用（用于自动注册 Capability）
-            ((ModuleService)_moduleService).SetContainer(_container);
 
             // 注册核心服务到容器
             _container.RegisterSingleton(_container);
@@ -78,66 +75,35 @@ namespace JulyCore.Core
         }
 
         /// <summary>
-        /// 注册 Provider 到 DI 容器并追踪生命周期
+        /// 初始化所有未初始化的 Provider（支持多次调用，已初始化的会被跳过）
         /// </summary>
-        /// <typeparam name="TInterface">Provider 接口类型</typeparam>
-        /// <typeparam name="TImplementation">Provider 实现类型</typeparam>
-        public void RegisterProvider<TInterface, TImplementation>() 
-            where TInterface : IProvider 
-            where TImplementation : class, TInterface
+        public async UniTask InitProvidersAsync(CancellationToken cancellationToken = default)
         {
-            // 注册到 DI 容器（使用构造函数注入）
-            _container.RegisterSingleton<TInterface, TImplementation>();
-            
-            // 解析实例并追踪生命周期
-            var provider = _container.Resolve<TInterface>();
-            _providerService.Track(provider);
-        }
-
-        /// <summary>
-        /// 注册已有实例的 Provider
-        /// </summary>
-        public void RegisterProvider<TInterface>(TInterface provider) where TInterface : IProvider
-        {
-            // 注册到 DI 容器
-            _container.RegisterSingleton(provider);
-            
-            // 追踪生命周期
-            _providerService.Track(provider);
-        }
-
-        /// <summary>
-        /// 初始化框架
-        /// </summary>
-        public async UniTask InitAsync(CancellationToken cancellationToken = default)
-        {
-            if (_isInitialized)
-            {
-                JLogger.LogWarning($"{Frameworkconst.TagFrameworkContext} 框架已经初始化，跳过重复初始化");
-                return;
-            }
-
             try
             {
-                JLogger.Log($"{Frameworkconst.TagFrameworkContext} 开始初始化框架");
-
                 CancellationToken = cancellationToken;
-
-                // 初始化所有Provider
                 await _providerService.InitAllAsync();
-
-                // 初始化所有Module
-                await _moduleService.InitAllAsync();
-                
-                // 启用所有Module
-                await _moduleService.EnableAllAsync();
-
-                _isInitialized = true;
-                JLogger.Log($"{Frameworkconst.TagFrameworkContext} 框架初始化完成");
             }
             catch (System.Exception ex)
             {
-                JLogger.LogError($"{Frameworkconst.TagFrameworkContext} 框架初始化失败: {ex.Message}");
+                JLogger.LogError($"{Frameworkconst.TagFrameworkContext} Provider 初始化失败: {ex.Message}");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// 初始化并启用所有未就绪的 Module（支持多次调用，已初始化/启用的会被跳过）
+        /// </summary>
+        public async UniTask InitModulesAsync()
+        {
+            try
+            {
+                await _moduleService.InitAllAsync();
+                _isInitialized = true;
+            }
+            catch (System.Exception ex)
+            {
+                JLogger.LogError($"{Frameworkconst.TagFrameworkContext} Module 初始化失败: {ex.Message}");
                 throw;
             }
         }
@@ -156,10 +122,6 @@ namespace JulyCore.Core
             {
                 JLogger.Log($"{Frameworkconst.TagFrameworkContext} 开始关闭框架");
 
-                // 先禁用所有Module
-                await _moduleService.DisableAllAsync();
-                
-                // 关闭所有Module
                 await _moduleService.ShutdownAsync();
 
                 // 关闭所有Provider

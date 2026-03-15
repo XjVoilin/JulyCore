@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 
 namespace JulyCore.Data.UI
@@ -224,5 +224,13 @@ namespace JulyCore.Data.UI
         public bool ClickMaskToClose { get; set; } = false;
     }
 
+    /// <summary>
+    /// UI 窗口配置提供者接口。
+    /// 项目侧实现此接口，将配置表数据映射为 UIOpenOptions。
+    /// </summary>
+    public interface IUIWindowConfigProvider
+    {
+        UIOpenOptions GetUIOpenOptions(int uiWindowID);
+    }
 }
 

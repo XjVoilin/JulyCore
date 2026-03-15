@@ -42,6 +42,40 @@ namespace JulyCore
                 }
             }
             
+            #region 窗口配置提供者
+
+            private static IUIWindowConfigProvider _windowConfigProvider;
+
+            /// <summary>
+            /// 设置 UI 窗口配置提供者（将 int windowId 映射为 UIOpenOptions）。
+            /// 项目侧在热更注册阶段调用。
+            /// </summary>
+            public static void SetWindowConfig(IUIWindowConfigProvider provider)
+            {
+                _windowConfigProvider = provider;
+            }
+
+            /// <summary>
+            /// 通过窗口 ID 打开 UI（从配置提供者查找完整参数）。
+            /// </summary>
+            public static void Open(int windowId, object data = null,
+                CancellationToken cancellationToken = default)
+            {
+                if (_windowConfigProvider == null)
+                {
+                    JLogger.LogWarning("[GF.UI] IUIWindowConfigProvider 未设置，请在初始化时调用 SetWindowConfig");
+                    return;
+                }
+
+                var options = _windowConfigProvider.GetUIOpenOptions(windowId);
+                if (options == null) return;
+
+                options.Data = data;
+                Open(options, cancellationToken);
+            }
+
+            #endregion
+
             #region 业务层方法（通过 UIModule，有栈管理和事件发布）
 
             #region 传统 API（返回值 + 异常）

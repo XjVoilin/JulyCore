@@ -1,4 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 
 namespace JulyCore.Core
 {
@@ -58,27 +58,13 @@ namespace JulyCore.Core
         bool HasModule<T>() where T : IModule;
 
         /// <summary>
-        /// 初始化所有 Module（自动解析依赖关系）
+        /// 初始化并启用所有 Module（自动解析依赖关系，已初始化的跳过）
         /// </summary>
-        /// <returns>初始化任务</returns>
         UniTask InitAllAsync();
 
         /// <summary>
-        /// 启用所有 Module
+        /// 关闭所有 Module（内部自动处理 Disable）
         /// </summary>
-        /// <returns>启用任务</returns>
-        UniTask EnableAllAsync();
-
-        /// <summary>
-        /// 禁用所有 Module
-        /// </summary>
-        /// <returns>禁用任务</returns>
-        UniTask DisableAllAsync();
-
-        /// <summary>
-        /// 关闭所有 Module
-        /// </summary>
-        /// <returns>关闭任务</returns>
         UniTask ShutdownAsync();
 
         /// <summary>

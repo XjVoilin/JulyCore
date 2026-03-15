@@ -134,9 +134,7 @@ namespace JulyCore.Module.Resource
         private void EnsureProvider()
         {
             if (_resourceProvider == null)
-            {
-                throw new InvalidOperationException($"[{Name}] ResourceProvider未初始化");
-            }
+                throw new InvalidOperationException($"[{Name}] ResourceProvider未初始化，请确保 Module 已完成初始化后再调用 GF.Resource");
         }
 
         protected override UniTask OnShutdownAsync()

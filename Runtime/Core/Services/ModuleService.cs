@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Cysharp.Threading.Tasks;
@@ -8,30 +7,14 @@ namespace JulyCore.Core
 {
     /// <summary>
     /// 模块服务实现
-    /// 线程安全，支持依赖注入和优先级排序
+    /// 支持优先级排序和增量初始化
     /// </summary>
     internal class ModuleService : IModuleService
     {
-        private readonly object _lock = new object();
-        private readonly ConcurrentDictionary<Type, IModule> _moduleDic = new();
+        private readonly Dictionary<Type, IModule> _moduleDic = new();
         private readonly List<IModule> _modules = new();
-        private IModule[] _cachedSnapshot = Array.Empty<IModule>();
-        private bool _cacheInvalid = true;
-        
-        /// <summary>
-        /// DI 容器引用，用于自动注册 Capability
-        /// </summary>
-        private IDependencyContainer _container;
 
         public bool IsInitialized { get; private set; }
-        
-        /// <summary>
-        /// 设置 DI 容器（由 FrameworkContext 在创建后调用）
-        /// </summary>
-        internal void SetContainer(IDependencyContainer container)
-        {
-            _container = container;
-        }
 
         #region 注册与获取
 
@@ -43,78 +26,25 @@ namespace JulyCore.Core
         public void RegisterModule(IModule module)
         {
             if (module == null)
-            {
                 throw new ArgumentNullException(nameof(module));
-            }
 
             var moduleType = module.GetType();
-            if (!_moduleDic.TryAdd(moduleType, module))
-            {
+            if (_moduleDic.ContainsKey(moduleType))
                 throw new JulyException($"模块 {moduleType.Name} 已经注册");
-            }
 
-            lock (_lock)
+            _moduleDic[moduleType] = module;
+
+            int priority = GetPriority(module);
+            int insertIndex = _modules.Count;
+            for (int i = 0; i < _modules.Count; i++)
             {
-                // 按优先级插入
-                int priority = GetPriority(module);
-                int insertIndex = _modules.Count;
-                for (int i = 0; i < _modules.Count; i++)
+                if (priority < GetPriority(_modules[i]))
                 {
-                    if (priority < GetPriority(_modules[i]))
-                    {
-                        insertIndex = i;
-                        break;
-                    }
-                }
-                _modules.Insert(insertIndex, module);
-                _cacheInvalid = true;
-            }
-
-            RegisterCapabilitiesToContainer(module);
-        }
-
-        /// <summary>
-        /// 将 Module 实现的 Capability 接口注册到 DI 容器
-        /// 使 Provider 可以通过构造函数注入这些 Capability
-        /// </summary>
-        private void RegisterCapabilitiesToContainer(IModule module)
-        {
-            if (_container == null) return;
-
-            var moduleType = module.GetType();
-            
-            foreach (var interfaceType in moduleType.GetInterfaces())
-            {
-                // 只注册 ICapability 的直接子接口
-                if (IsCapabilityInterface(interfaceType))
-                {
-                    _container.RegisterSingleton(interfaceType, module);
+                    insertIndex = i;
+                    break;
                 }
             }
-        }
-
-        /// <summary>
-        /// 判断是否为有效的 Capability 接口（ICapability 的直接子接口）
-        /// </summary>
-        private static bool IsCapabilityInterface(Type interfaceType)
-        {
-            // 必须继承自 ICapability
-            if (!typeof(ICapability).IsAssignableFrom(interfaceType))
-                return false;
-
-            // 排除 ICapability 本身
-            if (interfaceType == typeof(ICapability))
-                return false;
-
-            // 排除框架内部接口
-            if (interfaceType == typeof(IModule) ||
-                interfaceType == typeof(IProvider) ||
-                interfaceType == typeof(IModuleDependency) ||
-                interfaceType == typeof(IPriority) ||
-                interfaceType == typeof(IDisposable))
-                return false;
-
-            return true;
+            _modules.Insert(insertIndex, module);
         }
 
         public T GetModule<T>() where T : IModule
@@ -142,13 +72,10 @@ namespace JulyCore.Core
         {
             var capabilityType = typeof(TCapability);
             
-            // 遍历所有已注册的 Module，查找实现了指定接口的 Module
             foreach (var kvp in _moduleDic)
             {
                 if (capabilityType.IsAssignableFrom(kvp.Key))
-                {
                     return kvp.Value as TCapability;
-                }
             }
             
             return null;
@@ -160,16 +87,9 @@ namespace JulyCore.Core
 
         public async UniTask InitAllAsync()
         {
-            if (IsInitialized)
-            {
-                JLogger.LogWarning($"{Frameworkconst.TagModuleService} Module已经初始化，跳过重复初始化");
-                return;
-            }
-
-            var modules = ResolveDependencies();
-
-            // 已成功初始化的模块（用于失败回滚）
+            var modules = _modules.ToList();
             var initialized = new List<IModule>();
+            var newCount = 0;
 
             foreach (var module in modules)
             {
@@ -178,14 +98,15 @@ namespace JulyCore.Core
                     try
                     {
                         await module.InitAsync();
+                        await module.EnableAsync();
                         initialized.Add(module);
+                        newCount++;
                     }
                     catch (Exception ex)
                     {
                         JLogger.LogError($"{Frameworkconst.TagModuleService} 模块 {module.Name} 初始化失败: {ex.Message}");
                         JLogger.LogException(ex);
 
-                        // 回滚已初始化的模块
                         await RollbackAsync(initialized);
 
                         throw new JulyException(
@@ -197,60 +118,33 @@ namespace JulyCore.Core
             }
 
             IsInitialized = true;
-            JLogger.Log($"{Frameworkconst.TagModuleService} {modules.Count} 个 Module 初始化完成");
-        }
 
-        public async UniTask EnableAllAsync()
-        {
-            if (!IsInitialized)
-            {
-                JLogger.LogWarning($"{Frameworkconst.TagModuleService} Module未初始化，无法启用");
-                return;
-            }
-
-            var modules = GetSnapshot();
-
-            foreach (var module in modules)
-            {
-                if (module.IsInitialized && !module.IsEnabled)
-                {
-                    await module.EnableAsync();
-                }
-            }
-        }
-
-        public async UniTask DisableAllAsync()
-        {
-            var modules = GetSnapshot();
-
-            for (int i = modules.Length - 1; i >= 0; i--)
-            {
-                if (modules[i].IsEnabled)
-                {
-                    await modules[i].DisableAsync();
-                }
-            }
+            if (newCount > 0)
+                JLogger.Log($"{Frameworkconst.TagModuleService} {newCount} 个 Module 初始化完成");
         }
 
         public async UniTask ShutdownAsync()
         {
-            if (!IsInitialized)
-            {
-                return;
-            }
+            if (!IsInitialized) return;
 
-            var modules = GetSnapshot();
-
-            for (int i = modules.Length - 1; i >= 0; i--)
+            for (int i = _modules.Count - 1; i >= 0; i--)
             {
-                if (modules[i].IsInitialized)
+                if (_modules[i].IsInitialized)
                 {
-                    await modules[i].ShutdownAsync();
+                    try
+                    {
+                        await _modules[i].ShutdownAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        JLogger.LogError(
+                            $"{Frameworkconst.TagModuleService} Module {_modules[i].Name} 关闭异常: {ex.Message}");
+                    }
                 }
             }
 
             IsInitialized = false;
-            JLogger.Log($"{Frameworkconst.TagModuleService} {modules.Length} 个 Module 已关闭");
+            JLogger.Log($"{Frameworkconst.TagModuleService} {_modules.Count} 个 Module 已关闭");
         }
 
         public void Update(float elapseSeconds, float realElapseSeconds)
@@ -267,7 +161,6 @@ namespace JulyCore.Core
                 }
                 catch (Exception ex)
                 {
-                    // 记录异常但不中断其他模块
                     JLogger.LogError($"{Frameworkconst.TagModuleService} Module {module.Name} Update异常: {ex.Message}");
                     JLogger.LogException(ex);
                 }
@@ -276,24 +169,16 @@ namespace JulyCore.Core
 
         public void Clear()
         {
-            lock (_lock)
+            foreach (var module in _modules)
             {
-                foreach (var module in _modules)
+                try { module.Dispose(); }
+                catch (Exception ex)
                 {
-                    try
-                    {
-                        module.Dispose();
-                    }
-                    catch (Exception ex)
-                    {
-                        JLogger.LogError($"{Frameworkconst.TagModuleService} 释放Module {module.Name} 时异常: {ex.Message}");
-                    }
+                    JLogger.LogError($"{Frameworkconst.TagModuleService} 释放Module {module.Name} 时异常: {ex.Message}");
                 }
-
-                _modules.Clear();
-                _cacheInvalid = true;
             }
 
+            _modules.Clear();
             _moduleDic.Clear();
             IsInitialized = false;
         }
@@ -302,92 +187,6 @@ namespace JulyCore.Core
 
         #region 私有方法
 
-        private IModule[] GetSnapshot()
-        {
-            if (!_cacheInvalid) return _cachedSnapshot;
-
-            lock (_lock)
-            {
-                _cachedSnapshot = _modules.ToArray();
-                _cacheInvalid = false;
-            }
-
-            return _cachedSnapshot;
-        }
-
-        /// <summary>
-        /// 解析模块依赖并按拓扑排序
-        /// </summary>
-        private List<IModule> ResolveDependencies()
-        {
-            List<IModule> allModules;
-            lock (_lock)
-            {
-                allModules = _modules.ToList();
-            }
-
-            var result = new List<IModule>();
-            var visited = new HashSet<Type>();
-            var visiting = new HashSet<Type>();
-
-            // 构建依赖图
-            var depGraph = new Dictionary<Type, List<Type>>();
-            foreach (var module in allModules)
-            {
-                var type = module.GetType();
-                depGraph[type] = new List<Type>();
-
-                if (module is IModuleDependency dep)
-                {
-                    foreach (var depType in dep.GetDependencies())
-                    {
-                        if (!_moduleDic.ContainsKey(depType))
-                        {
-                            throw new JulyException($"模块 {type.Name} 依赖的模块 {depType.Name} 未注册");
-                        }
-                        depGraph[type].Add(depType);
-                    }
-                }
-            }
-
-            void Visit(Type type)
-            {
-                if (visited.Contains(type)) return;
-                if (visiting.Contains(type))
-                {
-                    throw new JulyException($"检测到循环依赖，涉及模块: {type.Name}");
-                }
-
-                visiting.Add(type);
-
-                if (depGraph.TryGetValue(type, out var deps))
-                {
-                    foreach (var dep in deps.OrderBy(d => _moduleDic.TryGetValue(d, out var m) ? GetPriority(m) : int.MaxValue))
-                    {
-                        Visit(dep);
-                    }
-                }
-
-                visiting.Remove(type);
-                visited.Add(type);
-
-                if (_moduleDic.TryGetValue(type, out var module))
-                {
-                    result.Add(module);
-                }
-            }
-
-            foreach (var module in allModules.OrderBy(GetPriority))
-            {
-                Visit(module.GetType());
-            }
-
-            return result;
-        }
-
-        /// <summary>
-        /// 回滚已初始化的模块
-        /// </summary>
         private async UniTask RollbackAsync(List<IModule> modules)
         {
             if (modules.Count == 0) return;
@@ -398,9 +197,7 @@ namespace JulyCore.Core
             {
                 try
                 {
-                    var m = modules[i];
-                    if (m.IsEnabled) await m.DisableAsync();
-                    await m.ShutdownAsync();
+                    await modules[i].ShutdownAsync();
                 }
                 catch (Exception ex)
                 {
@@ -419,4 +216,3 @@ namespace JulyCore.Core
         #endregion
     }
 }
-
