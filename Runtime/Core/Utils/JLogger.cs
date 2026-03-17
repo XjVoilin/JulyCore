@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
@@ -77,7 +77,7 @@ namespace JulyCore.Core
         /// <summary>
         /// 输出通道日志（受通道开关控制）
         /// </summary>
-        [Conditional("JULYGF_ENABLE_LOG")]
+        [Conditional("JULYGF_DEBUG")]
         public static void LogChannel(LogChannel channel, string tag, object message)
         {
             if (!IsChannelEnabled(channel)) return;
@@ -87,7 +87,7 @@ namespace JulyCore.Core
         /// <summary>
         /// 输出通道警告日志（不受通道开关控制）
         /// </summary>
-        [Conditional("JULYGF_ENABLE_LOG")]
+        [Conditional("JULYGF_DEBUG")]
         public static void LogChannelWarning(string tag, object message)
         {
             InternalLog(LogLevel.Warning, $"[{tag}] {message}");
@@ -151,7 +151,7 @@ namespace JulyCore.Core
         /// 输出普通日志
         /// </summary>
         /// <param name="message">日志消息</param>
-        [Conditional("JULYGF_ENABLE_LOG")]
+        [Conditional("JULYGF_DEBUG")]
         public static void Log(object message) => InternalLog(LogLevel.Info, message);
 
         /// <summary>
@@ -159,21 +159,21 @@ namespace JulyCore.Core
         /// </summary>
         /// <param name="message">日志消息</param>
         /// <param name="context">上下文对象</param>
-        [Conditional("JULYGF_ENABLE_LOG")]
+        [Conditional("JULYGF_DEBUG")]
         public static void Log(object message, Object context) => InternalLog(LogLevel.Info, message, context);
         
         /// <summary>
         /// 输出调试日志
         /// </summary>
         /// <param name="message">日志消息</param>
-        [Conditional("JULYGF_ENABLE_LOG")]
+        [Conditional("JULYGF_DEBUG")]
         public static void LogDebug(object message) => InternalLog(LogLevel.Debug, message);
 
         /// <summary>
         /// 输出信息日志
         /// </summary>
         /// <param name="message">日志消息</param>
-        [Conditional("JULYGF_ENABLE_LOG")]
+        [Conditional("JULYGF_DEBUG")]
         public static void LogInfo(object message) => InternalLog(LogLevel.Info, message);
 
         #endregion
@@ -184,7 +184,7 @@ namespace JulyCore.Core
         /// 输出警告日志
         /// </summary>
         /// <param name="message">日志消息</param>
-        [Conditional("JULYGF_ENABLE_LOG")]
+        [Conditional("JULYGF_DEBUG")]
         public static void LogWarning(object message) => InternalLog(LogLevel.Warning, message);
 
         /// <summary>
@@ -192,7 +192,7 @@ namespace JulyCore.Core
         /// </summary>
         /// <param name="message">日志消息</param>
         /// <param name="context">上下文对象</param>
-        [Conditional("JULYGF_ENABLE_LOG")]
+        [Conditional("JULYGF_DEBUG")]
         public static void LogWarning(object message, Object context) => InternalLog(LogLevel.Warning, message, context);
 
         #endregion
@@ -244,7 +244,7 @@ namespace JulyCore.Core
         /// </summary>
         /// <param name="condition">条件</param>
         /// <param name="message">消息</param>
-        [Conditional("JULYGF_ENABLE_LOG")]
+        [Conditional("JULYGF_DEBUG")]
         public static void Assert(bool condition, object message) => Debug.Assert(condition, message);
 
         /// <summary>
@@ -253,7 +253,7 @@ namespace JulyCore.Core
         /// <param name="condition">条件</param>
         /// <param name="message">消息</param>
         /// <param name="context">上下文对象</param>
-        [Conditional("JULYGF_ENABLE_LOG")]
+        [Conditional("JULYGF_DEBUG")]
         public static void Assert(bool condition, object message, Object context) => Debug.Assert(condition, message, context);
 
         #endregion

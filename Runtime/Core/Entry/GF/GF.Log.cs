@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using JulyCore.Core;
 using UnityEngine;
 
@@ -13,37 +13,37 @@ namespace JulyCore
         /// <summary>
         /// 输出普通日志
         /// </summary>
-        [Conditional("JULYGF_ENABLE_LOG")]
+        [Conditional("JULYGF_DEBUG")]
         public static void Log(object message) => JLogger.Log(message);
 
         /// <summary>
         /// 输出普通日志（带上下文）
         /// </summary>
-        [Conditional("JULYGF_ENABLE_LOG")]
+        [Conditional("JULYGF_DEBUG")]
         public static void Log(object message, Object context) => JLogger.Log(message, context);
 
         /// <summary>
         /// 输出调试日志
         /// </summary>
-        [Conditional("JULYGF_ENABLE_LOG")]
+        [Conditional("JULYGF_DEBUG")]
         public static void LogDebug(object message) => JLogger.LogDebug(message);
 
         /// <summary>
         /// 输出信息日志
         /// </summary>
-        [Conditional("JULYGF_ENABLE_LOG")]
+        [Conditional("JULYGF_DEBUG")]
         public static void LogInfo(object message) => JLogger.LogInfo(message);
 
         /// <summary>
         /// 输出警告日志
         /// </summary>
-        [Conditional("JULYGF_ENABLE_LOG")]
+        [Conditional("JULYGF_DEBUG")]
         public static void LogWarning(object message) => JLogger.LogWarning(message);
 
         /// <summary>
         /// 输出警告日志（带上下文）
         /// </summary>
-        [Conditional("JULYGF_ENABLE_LOG")]
+        [Conditional("JULYGF_DEBUG")]
         public static void LogWarning(object message, Object context) => JLogger.LogWarning(message, context);
 
         /// <summary>
@@ -74,13 +74,13 @@ namespace JulyCore
         /// <summary>
         /// 断言
         /// </summary>
-        [Conditional("JULYGF_ENABLE_LOG")]
+        [Conditional("JULYGF_DEBUG")]
         public static void Assert(bool condition, object message) => JLogger.Assert(condition, message);
 
         /// <summary>
         /// 断言（带上下文）
         /// </summary>
-        [Conditional("JULYGF_ENABLE_LOG")]
+        [Conditional("JULYGF_DEBUG")]
         public static void Assert(bool condition, object message, Object context) => JLogger.Assert(condition, message, context);
     }
 }
