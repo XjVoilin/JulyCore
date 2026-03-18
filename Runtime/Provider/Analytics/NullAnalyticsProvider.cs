@@ -1,6 +1,4 @@
 using System.Collections.Generic;
-using System.Threading;
-using Cysharp.Threading.Tasks;
 using JulyCore.Core;
 using JulyCore.Provider.Base;
 
@@ -15,19 +13,9 @@ namespace JulyCore.Provider.Analytics
     {
         protected override LogChannel LogChannel => LogChannel.Analytics;
 
-        public UniTask<bool> TrackEventAsync(AnalyticsEvent evt, CancellationToken cancellationToken = default)
-            => UniTask.FromResult(true);
-
-        public UniTask<bool> TrackEventsAsync(List<AnalyticsEvent> events, CancellationToken cancellationToken = default)
-            => UniTask.FromResult(true);
-
+        public void Track(string eventName, Dictionary<string, object> parameters = null) { }
         public void SetUserId(string userId) { }
-
         public void SetUserProperties(Dictionary<string, object> properties) { }
-
-        public UniTask<bool> FlushAsync(CancellationToken cancellationToken = default)
-            => UniTask.FromResult(true);
-
-        public int GetPendingEventCount() => 0;
+        public void Flush() { }
     }
 }
