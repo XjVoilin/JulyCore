@@ -23,6 +23,11 @@ namespace JulyCore
                 return Module.GetService<T>();
             }
 
+            public static UnityEngine.Rect GetSafeArea()
+            {
+                return Module.GetSafeArea();
+            }
+
             public static UniTask ColdLaunchAsync()
             {
                 return Module.ColdLaunchAsync();
