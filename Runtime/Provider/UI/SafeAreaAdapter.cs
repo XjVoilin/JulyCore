@@ -1,3 +1,5 @@
+using JulyCore.Core;
+using JulyCore.Provider.Platform;
 using UnityEngine;
 
 namespace JulyCore.Provider.UI
@@ -6,16 +8,19 @@ namespace JulyCore.Provider.UI
     /// Safe Area 适配组件
     /// 自动调整 RectTransform 到设备安全区域，处理刘海屏、圆角、底部手势条等遮挡
     /// 由 UIProvider 在创建 Layer 时自动添加，无需手动挂载
+    /// 优先使用 IPlatformProvider.GetSafeArea()，未注册时回退到 Screen.safeArea
     /// </summary>
     [RequireComponent(typeof(RectTransform))]
     public class SafeAreaAdapter : MonoBehaviour
     {
         private RectTransform _rect;
         private Rect _lastSafeArea;
+        private IPlatformProvider _platform;
 
         private void Awake()
         {
             _rect = GetComponent<RectTransform>();
+            FrameworkContext.Instance?.Container?.TryResolve(out _platform);
         }
 
         private void OnEnable()
@@ -25,7 +30,8 @@ namespace JulyCore.Provider.UI
 
         private void Update()
         {
-            if (_lastSafeArea != Screen.safeArea)
+            var current = _platform?.GetSafeArea() ?? Screen.safeArea;
+            if (_lastSafeArea != current)
             {
                 ApplySafeArea();
             }
@@ -33,7 +39,7 @@ namespace JulyCore.Provider.UI
 
         private void ApplySafeArea()
         {
-            var safeArea = Screen.safeArea;
+            var safeArea = _platform?.GetSafeArea() ?? Screen.safeArea;
             _lastSafeArea = safeArea;
 
             var screenW = (float)Screen.width;
