@@ -19,7 +19,7 @@ namespace JulyCore
         public static class UI
         {
             private static IUIProvider _provider;
-            
+
             private static IUIProvider Provider
             {
                 get
@@ -28,11 +28,13 @@ namespace JulyCore
                     {
                         _context.Container.TryResolve(out _provider);
                     }
+
                     return _provider;
                 }
             }
-            
+
             private static UIModule _module;
+
             private static UIModule Module
             {
                 get
@@ -41,7 +43,10 @@ namespace JulyCore
                     return _module;
                 }
             }
-            
+
+            public static Vector2 DesignResolution => _module.DesignResolution;
+            public static float ScreenMatchMode => _module.ScreenMatchMode;
+
             #region 窗口配置提供者
 
             private static IUIWindowConfigProvider _windowConfigProvider;
@@ -93,7 +98,8 @@ namespace JulyCore
                 object param = null, CancellationToken cancellationToken = default)
             {
                 OpenAsync(windowId, windowName, layer, param, cancellationToken)
-                    .Forget(ex => JLogger.LogError($"[GF.UI] 打开UI失败 (ID: {windowId}, Name: {windowName}): {ex.Message}"));
+                    .Forget(ex =>
+                        JLogger.LogError($"[GF.UI] 打开UI失败 (ID: {windowId}, Name: {windowName}): {ex.Message}"));
             }
 
             /// <summary>
@@ -118,7 +124,8 @@ namespace JulyCore
             /// <param name="param">打开参数</param>
             /// <param name="cancellationToken">取消令牌</param>
             /// <returns>UI组件实例</returns>
-            public static async UniTask<UIBase> OpenAsync(int windowId, string windowName, UILayer layer = UILayer.Normal,
+            public static async UniTask<UIBase> OpenAsync(int windowId, string windowName,
+                UILayer layer = UILayer.Normal,
                 object param = null, CancellationToken cancellationToken = default)
             {
                 var options = new UIOpenOptions
@@ -292,9 +299,10 @@ namespace JulyCore
                     var ui = await Module.OpenAsync(options, cancellationToken);
                     if (ui == null)
                     {
-                        return FrameworkResult<UIBase>.Failure(FrameworkErrorCode.UIOpenFailed, 
+                        return FrameworkResult<UIBase>.Failure(FrameworkErrorCode.UIOpenFailed,
                             $"UI打开失败: {options.WindowIdentifier}");
                     }
+
                     return FrameworkResult<UIBase>.Success(ui);
                 }
                 catch (OperationCanceledException)
@@ -303,7 +311,7 @@ namespace JulyCore
                 }
                 catch (Exception ex)
                 {
-                    return FrameworkResult<UIBase>.Failure(FrameworkErrorCode.UIOpenFailed, 
+                    return FrameworkResult<UIBase>.Failure(FrameworkErrorCode.UIOpenFailed,
                         $"UI打开失败: {ex.Message}", ex);
                 }
             }
@@ -348,7 +356,7 @@ namespace JulyCore
             #endregion
 
             #endregion
-            
+
             #region 技术层方法（直接调用 IUIProvider，纯查询/预加载，无业务逻辑）
 
             /// <summary>
@@ -396,6 +404,7 @@ namespace JulyCore
                     JLogger.LogWarning("[GF.UI] IUIProvider未注册");
                     return UniTask.FromResult(false);
                 }
+
                 return Provider.PreloadAsync(uiType, cancellationToken);
             }
 
@@ -411,6 +420,7 @@ namespace JulyCore
                     JLogger.LogWarning("[GF.UI] IUIProvider未注册");
                     return UniTask.CompletedTask;
                 }
+
                 return Provider.PreloadBatchAsync(uiTypes, cancellationToken);
             }
 
@@ -432,7 +442,7 @@ namespace JulyCore
             {
                 return Provider != null && Provider.IsPreloaded(uiType);
             }
-            
+
             #endregion
 
             #region Tip
@@ -446,9 +456,9 @@ namespace JulyCore
             {
                 Provider?.ShowTip(message, duration);
             }
-            
+
             #endregion
-            
+
             /// <summary>
             /// 重置缓存的 Provider 引用（框架重启时调用）
             /// </summary>

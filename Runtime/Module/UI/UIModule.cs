@@ -8,6 +8,7 @@ using JulyCore.Data.UI;
 using JulyCore.Module.Base;
 using JulyCore.Provider.UI;
 using JulyCore.Provider.UI.Events;
+using UnityEngine;
 
 namespace JulyCore.Module.UI
 {
@@ -39,6 +40,9 @@ namespace JulyCore.Module.UI
         private readonly Dictionary<WindowIdentifier, UILayer> _openedUILayers = new Dictionary<WindowIdentifier, UILayer>();
 
         public override int Priority => Frameworkconst.PriorityUIModule;
+
+        public Vector2 DesignResolution => FrameworkConfig.UIConfig.DesignResolution;
+        public float ScreenMatchMode => FrameworkConfig.UIConfig.ScreenMatchMode;
 
         protected override UniTask OnInitAsync()
         {
