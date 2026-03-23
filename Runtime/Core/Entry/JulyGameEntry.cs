@@ -273,6 +273,15 @@ namespace JulyCore.Core
         }
 
         /// <summary>
+        /// 向 DI 容器注册非 Provider 单例实例，供 Provider 构造函数注入使用。
+        /// 必须在 Provider 解析之前调用（通常在 OnPreLaunch 中）。
+        /// </summary>
+        protected void RegisterSingleton<T>(T instance)
+        {
+            _context.Container.RegisterSingleton(instance);
+        }
+
+        /// <summary>
         /// 解析所有已注册的 Provider 并追踪生命周期（Track 内部去重）
         /// </summary>
         private void ResolveAllProviders()
