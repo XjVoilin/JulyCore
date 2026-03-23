@@ -92,7 +92,7 @@ namespace JulyCore.Module.Http
         {
             if (_httpProvider == null)
                 throw new System.InvalidOperationException(
-                    "IHttpProvider 未注册，请在 RegisterBaseProviders 中注册");
+                    "IHttpProvider 未注册，请在 OnConfigureBase 中注册");
         }
 
         private void PublishHttpEvent(string method, string url, HttpResponse response)

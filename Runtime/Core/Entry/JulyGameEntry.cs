@@ -93,7 +93,7 @@ namespace JulyCore.Core
                 RegisterDefaultBaseModules(moduleService);
                 
                 RegisterDefaultBaseProviders();
-                RegisterBaseProviders();
+                OnConfigureBase();
                 
                 ResolveAllProviders();
                 await _context.InitProvidersAsync(_cancellationTokenSource.Token);
@@ -156,9 +156,11 @@ namespace JulyCore.Core
         }
 
         /// <summary>
-        /// 注册项目自定义基础 Provider（子类重写，如 YooAsset、平台 SDK 等 AOT Provider）
+        /// 项目配置基础层钩子（子类重写）。
+        /// 时机：框架默认基础 Provider 注册后、初始化前。
+        /// 典型用途：注册 YooAsset、平台 SDK 等 AOT Provider 覆盖默认实现。
         /// </summary>
-        protected virtual void RegisterBaseProviders()
+        protected virtual void OnConfigureBase()
         {
         }
 
@@ -177,7 +179,6 @@ namespace JulyCore.Core
             RegisterBusinessModules(moduleService);
             
             RegisterDefaultBusinessProviders();
-            RegisterBusinessProviders();
         }
 
         /// <summary>
@@ -234,13 +235,6 @@ namespace JulyCore.Core
         /// 注册项目自定义业务 Module（子类重写）
         /// </summary>
         protected virtual void RegisterBusinessModules(IModuleService moduleService)
-        {
-        }
-
-        /// <summary>
-        /// 注册项目自定义业务 Provider（子类重写）
-        /// </summary>
-        protected virtual void RegisterBusinessProviders()
         {
         }
 
