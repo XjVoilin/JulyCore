@@ -33,6 +33,7 @@ using JulyCore.Core.Config;
 using JulyCore.Module.Activity;
 using JulyCore.Module.Config;
 using JulyCore.Module.Fsm;
+using JulyCore.Module.Http;
 using JulyCore.Module.Platform;
 using JulyCore.Module.Scene;
 using JulyCore.Provider.Activity;
@@ -136,6 +137,7 @@ namespace JulyCore.Core
             moduleService.RegisterModule<PerformanceModule>();
             moduleService.RegisterModule<SceneModule>();
             moduleService.RegisterModule<PlatformModule>();
+            moduleService.RegisterModule<HttpModule>();
         }
 
         /// <summary>

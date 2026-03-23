@@ -51,7 +51,7 @@ namespace JulyCore.Module.Network
     /// </summary>
     public class NetworkModule : ModuleBase
     {
-        private INetworkProvider _networkProvider;
+        private IWebSocketProvider _networkProvider;
         private NetworkConfig _config;
         private IMessageSerializer _serializer;
 
@@ -93,7 +93,7 @@ namespace JulyCore.Module.Network
         {
             try
             {
-                _networkProvider = GetProvider<INetworkProvider>();
+                _networkProvider = GetProvider<IWebSocketProvider>();
 
                 if (_networkProvider == null)
                 {
@@ -170,7 +170,6 @@ namespace JulyCore.Module.Network
         public void Configure(NetworkConfig config)
         {
             _config = config ?? new NetworkConfig();
-            _networkProvider?.ConfigureHttp(_config.Http);
         }
 
         /// <summary>
@@ -612,96 +611,6 @@ namespace JulyCore.Module.Network
                     Send(pingMessage, connectionName);
                 }
             }
-        }
-
-        #endregion
-
-        #region HTTP请求
-
-        /// <summary>
-        /// 发送HTTP GET请求
-        /// </summary>
-        public async UniTask<HttpResponse> GetAsync(string url, Dictionary<string, string> headers = null, CancellationToken cancellationToken = default)
-        {
-            if (_networkProvider == null)
-            {
-                throw new InvalidOperationException("网络提供者未初始化");
-            }
-
-            var response = await _networkProvider.GetAsync(url, headers, cancellationToken);
-            PublishHttpEvent("GET", url, response);
-            return response;
-        }
-
-        /// <summary>
-        /// 发送HTTP POST请求
-        /// </summary>
-        public async UniTask<HttpResponse> PostAsync(string url, byte[] data, Dictionary<string, string> headers = null, CancellationToken cancellationToken = default)
-        {
-            if (_networkProvider == null)
-            {
-                throw new InvalidOperationException("网络提供者未初始化");
-            }
-
-            var response = await _networkProvider.PostAsync(url, data, headers, cancellationToken);
-            PublishHttpEvent("POST", url, response);
-            return response;
-        }
-
-        /// <summary>
-        /// 发送HTTP POST请求（JSON格式）
-        /// </summary>
-        public async UniTask<HttpResponse> PostJsonAsync(string url, string jsonData, Dictionary<string, string> headers = null, CancellationToken cancellationToken = default)
-        {
-            if (_networkProvider == null)
-            {
-                throw new InvalidOperationException("网络提供者未初始化");
-            }
-
-            var response = await _networkProvider.PostJsonAsync(url, jsonData, headers, cancellationToken);
-            PublishHttpEvent("POST", url, response);
-            return response;
-        }
-
-        /// <summary>
-        /// 发送HTTP PUT请求
-        /// </summary>
-        public async UniTask<HttpResponse> PutAsync(string url, byte[] data, Dictionary<string, string> headers = null, CancellationToken cancellationToken = default)
-        {
-            if (_networkProvider == null)
-            {
-                throw new InvalidOperationException("网络提供者未初始化");
-            }
-
-            var response = await _networkProvider.PutAsync(url, data, headers, cancellationToken);
-            PublishHttpEvent("PUT", url, response);
-            return response;
-        }
-
-        /// <summary>
-        /// 发送HTTP DELETE请求
-        /// </summary>
-        public async UniTask<HttpResponse> DeleteAsync(string url, Dictionary<string, string> headers = null, CancellationToken cancellationToken = default)
-        {
-            if (_networkProvider == null)
-            {
-                throw new InvalidOperationException("网络提供者未初始化");
-            }
-
-            var response = await _networkProvider.DeleteAsync(url, headers, cancellationToken);
-            PublishHttpEvent("DELETE", url, response);
-            return response;
-        }
-
-        private void PublishHttpEvent(string method, string url, HttpResponse response)
-        {
-            EventBus?.Publish(new HttpRequestCompletedEvent
-            {
-                Method = method,
-                Url = url,
-                Response = response,
-                IsSuccess = response.IsSuccess
-            });
         }
 
         #endregion

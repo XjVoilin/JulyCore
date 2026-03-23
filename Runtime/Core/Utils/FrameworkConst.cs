@@ -23,6 +23,7 @@ namespace JulyCore.Core
         public const int PriorityLocalizationModule = 9;   // 多语言模块（UI等模块可能依赖）
         public const int PrioritySerializeModule = 10;
         public const int PrioritySaveModule = 15;
+        public const int PriorityHttpModule = 19;        // HTTP 模块
         public const int PriorityNetworkModule = 20;
         public const int PriorityAnalyticsModule = 21;     // 数据统计模块（依赖NetworkModule和SerializeModule）
         public const int PriorityFsmModule = 22;           // 状态机模块
@@ -65,7 +66,8 @@ namespace JulyCore.Core
         public const int PrioritySceneProvider = 42;          // 场景
         
         // 业务扩展层
-        public const int PriorityNetworkProvider = 50;        // 网络
+        public const int PriorityHttpProvider = 49;            // HTTP
+        public const int PriorityNetworkProvider = 50;        // WebSocket
         public const int PriorityAnalyticsProvider = 51;      // 数据分析
         public const int PriorityTaskProvider = 52;           // 任务
         public const int PriorityActivityProvider = 53;       // 活动

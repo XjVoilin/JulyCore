@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -201,50 +201,6 @@ namespace JulyCore
 
             #endregion
 
-            #region HTTP 请求
-
-            /// <summary>
-            /// 发送HTTP GET请求
-            /// </summary>
-            public static UniTask<HttpResponse> GetAsync(string url, Dictionary<string, string> headers = null, CancellationToken cancellationToken = default)
-            {
-                return Module.GetAsync(url, headers, cancellationToken);
-            }
-
-            /// <summary>
-            /// 发送HTTP POST请求
-            /// </summary>
-            public static UniTask<HttpResponse> PostAsync(string url, byte[] data, Dictionary<string, string> headers = null, CancellationToken cancellationToken = default)
-            {
-                return Module.PostAsync(url, data, headers, cancellationToken);
-            }
-
-            /// <summary>
-            /// 发送HTTP POST请求（JSON格式）
-            /// </summary>
-            public static UniTask<HttpResponse> PostJsonAsync(string url, string jsonData, Dictionary<string, string> headers = null, CancellationToken cancellationToken = default)
-            {
-                return Module.PostJsonAsync(url, jsonData, headers, cancellationToken);
-            }
-
-            /// <summary>
-            /// 发送HTTP PUT请求
-            /// </summary>
-            public static UniTask<HttpResponse> PutAsync(string url, byte[] data, Dictionary<string, string> headers = null, CancellationToken cancellationToken = default)
-            {
-                return Module.PutAsync(url, data, headers, cancellationToken);
-            }
-
-            /// <summary>
-            /// 发送HTTP DELETE请求
-            /// </summary>
-            public static UniTask<HttpResponse> DeleteAsync(string url, Dictionary<string, string> headers = null, CancellationToken cancellationToken = default)
-            {
-                return Module.DeleteAsync(url, headers, cancellationToken);
-            }
-
-            #endregion
-
             #region 统计与日志
 
             /// <summary>
@@ -343,14 +299,6 @@ namespace JulyCore
             /// 订阅网络延迟更新事件
             /// </summary>
             public static void OnLatencyUpdated(Action<NetworkLatencyUpdatedEvent> handler, object target)
-            {
-                _context.EventBus?.Subscribe(handler, target);
-            }
-
-            /// <summary>
-            /// 订阅HTTP请求完成事件
-            /// </summary>
-            public static void OnHttpCompleted(Action<HttpRequestCompletedEvent> handler, object target)
             {
                 _context.EventBus?.Subscribe(handler, target);
             }
