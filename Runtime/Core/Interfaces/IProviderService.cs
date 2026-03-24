@@ -34,7 +34,7 @@ namespace JulyCore.Core
         /// <summary>
         /// 关闭所有已追踪的 Provider
         /// </summary>
-        UniTask ShutdownAllAsync();
+        void ShutdownAll();
 
         /// <summary>
         /// 清空所有 Provider（用于测试或重置）

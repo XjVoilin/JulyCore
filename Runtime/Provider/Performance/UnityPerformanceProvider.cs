@@ -394,7 +394,7 @@ namespace JulyCore.Provider.Performance
             }
             catch (Exception ex)
             {
-                LogError($"[{Name}] 保存性能数据失败: {ex.Message}");
+                GF.LogException(ex);
                 return false;
             }
         }
@@ -419,7 +419,7 @@ namespace JulyCore.Provider.Performance
             }
             catch (Exception ex)
             {
-                LogError($"[{Name}] 加载性能数据失败: {ex.Message}");
+                GF.LogException(ex);
                 return null;
             }
         }
@@ -582,12 +582,12 @@ namespace JulyCore.Provider.Performance
             }
             catch (Exception ex)
             {
-                LogError($"[{Name}] 反序列化性能数据失败: {ex.Message}");
+                GF.LogException(ex);
                 return null;
             }
         }
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             ClearSamples();
             lock (_fpsHistory)
@@ -599,7 +599,6 @@ namespace JulyCore.Provider.Performance
             {
                 _performanceDataHistory.Clear();
             }
-            return base.OnShutdownAsync();
         }
     }
 }

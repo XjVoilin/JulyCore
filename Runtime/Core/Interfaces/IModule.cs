@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 
@@ -47,17 +47,13 @@ namespace JulyCore.Core
 
         /// <summary>
         /// 启用Module
-        /// 使用框架级 CancellationToken（从 FrameworkContext 获取）
         /// </summary>
-        /// <returns>启用任务</returns>
-        UniTask EnableAsync();
-        
+        void Enable();
+
         /// <summary>
         /// 禁用Module
-        /// 使用框架级 CancellationToken（从 FrameworkContext 获取）
         /// </summary>
-        /// <returns>禁用任务</returns>
-        UniTask DisableAsync();
+        void Disable();
         
         /// <summary>
         /// 关闭Module

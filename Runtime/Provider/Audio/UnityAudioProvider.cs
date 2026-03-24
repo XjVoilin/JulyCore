@@ -58,7 +58,7 @@ namespace JulyCore.Provider.Audio
             return UniTask.CompletedTask;
         }
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             // 停止所有音频并清理
             var handlesToStop = new List<AudioHandle>(_activeHandles);
@@ -78,8 +78,6 @@ namespace JulyCore.Provider.Audio
             _fadeTweeners.Clear();
             _resourceProvider = null;
             _poolProvider = null;
-
-            return UniTask.CompletedTask;
         }
 
         #region IAudioProvider 实现

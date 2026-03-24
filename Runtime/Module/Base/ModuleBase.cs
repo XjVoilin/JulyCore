@@ -151,72 +151,31 @@ namespace JulyCore.Module.Base
                 throw new JulyException($"[{Name}] Module已被释放，无法初始化");
             }
 
-            try
-            {
-                _context = FrameworkContext.Instance;
-                await OnInitAsync();
-                _isInitialized = true;
-            }
-            catch (Exception ex)
-            {
-                JLogger.LogError($"[{Name}] Module初始化失败: {ex.Message}");
-                JLogger.LogException(ex);
-                throw;
-            }
+            _context = FrameworkContext.Instance;
+            await OnInitAsync();
+            _isInitialized = true;
         }
 
         /// <summary>
         /// 启用Module
         /// </summary>
-        /// <returns>启用任务</returns>
-        public async UniTask EnableAsync()
+        public void Enable()
         {
             if (!_isInitialized)
-            {
                 throw new JulyException($"[{Name}] Module未初始化，无法启用");
-            }
-
-            if (_isEnabled)
-            {
-                JLogger.LogWarning($"[{Name}] Module已经启用，跳过重复启用");
-                return;
-            }
-
-            try
-            {
-                await OnEnableAsync();
-                _isEnabled = true;
-            }
-            catch (Exception ex)
-            {
-                JLogger.LogError($"[{Name}] Module启用失败: {ex.Message}");
-                JLogger.LogException(ex);
-                throw;
-            }
+            if (_isEnabled) return;
+            OnEnable();
+            _isEnabled = true;
         }
 
         /// <summary>
         /// 禁用Module
         /// </summary>
-        /// <returns>禁用任务</returns>
-        public async UniTask DisableAsync()
+        public void Disable()
         {
-            if (!_isEnabled)
-            {
-                return;
-            }
-
-            try
-            {
-                await OnDisableAsync();
-                _isEnabled = false;
-            }
-            catch (Exception ex)
-            {
-                JLogger.LogError($"[{Name}] Module禁用失败: {ex.Message}");
-                JLogger.LogException(ex);
-                throw;
-            }
+            if (!_isEnabled) return;
+            OnDisable();
+            _isEnabled = false;
         }
 
         /// <summary>
@@ -251,17 +210,11 @@ namespace JulyCore.Module.Base
                 // 先禁用
                 if (_isEnabled)
                 {
-                    await DisableAsync();
+                    Disable();
                 }
 
                 await OnShutdownAsync();
                 _isInitialized = false;
-            }
-            catch (Exception ex)
-            {
-                JLogger.LogError($"[{Name}] Module关闭失败: {ex.Message}");
-                JLogger.LogException(ex);
-                throw;
             }
             finally
             {
@@ -294,7 +247,6 @@ namespace JulyCore.Module.Base
             }
             catch (Exception ex)
             {
-                JLogger.LogError($"[{Name}] Module释放失败: {ex.Message}");
                 JLogger.LogException(ex);
             }
         }
@@ -310,17 +262,15 @@ namespace JulyCore.Module.Base
         /// <summary>
         /// 子类实现：具体的启用逻辑
         /// </summary>
-        protected virtual UniTask OnEnableAsync()
+        protected virtual void OnEnable()
         {
-            return UniTask.CompletedTask;
         }
 
         /// <summary>
         /// 子类实现：具体的禁用逻辑
         /// </summary>
-        protected virtual UniTask OnDisableAsync()
+        protected virtual void OnDisable()
         {
-            return UniTask.CompletedTask;
         }
 
         /// <summary>

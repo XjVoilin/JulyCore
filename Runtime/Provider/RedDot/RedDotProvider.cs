@@ -34,13 +34,12 @@ namespace JulyCore.Provider.RedDot
             return UniTask.CompletedTask;
         }
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             lock (_lock)
             {
                 _storage.Clear();
             }
-            return UniTask.CompletedTask;
         }
 
         #region 节点存储（CRUD）

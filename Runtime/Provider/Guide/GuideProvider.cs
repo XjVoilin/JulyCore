@@ -38,7 +38,7 @@ namespace JulyCore.Provider.Guide
             return UniTask.CompletedTask;
         }
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             lock (_lock)
             {
@@ -49,7 +49,6 @@ namespace JulyCore.Provider.Guide
                 _currentFlowId = null;
                 _currentStepId = null;
             }
-            return UniTask.CompletedTask;
         }
 
         #region 流程状态

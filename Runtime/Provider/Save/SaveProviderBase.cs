@@ -90,7 +90,7 @@ namespace JulyCore.Provider.Save
             }
             catch (Exception ex)
             {
-                LogError($"[{Name}] 序列化失败: {key}, 错误: {ex.Message}");
+                GF.LogException(ex);
                 return (null, SaveFailureReason.SerializationFailed);
             }
 
@@ -107,7 +107,7 @@ namespace JulyCore.Provider.Save
             }
             catch (Exception ex)
             {
-                LogError($"[{Name}] 加密失败: {key}, 错误: {ex.Message}");
+                GF.LogException(ex);
                 return (null, SaveFailureReason.EncryptionFailed);
             }
 
@@ -692,14 +692,13 @@ namespace JulyCore.Provider.Save
         /// <summary>
         /// 关闭时清理
         /// </summary>
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             lock (_lock)
             {
                 _registeredData.Clear();
                 _dirtyKeys.Clear();
             }
-            return base.OnShutdownAsync();
         }
 
         // 抽象方法，子类必须实现

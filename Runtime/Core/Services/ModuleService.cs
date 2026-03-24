@@ -98,15 +98,12 @@ namespace JulyCore.Core
                     try
                     {
                         await module.InitAsync();
-                        await module.EnableAsync();
+                        module.Enable();
                         initialized.Add(module);
                         newCount++;
                     }
                     catch (Exception ex)
                     {
-                        JLogger.LogError($"{Frameworkconst.TagModuleService} 模块 {module.Name} 初始化失败: {ex.Message}");
-                        JLogger.LogException(ex);
-
                         await RollbackAsync(initialized);
 
                         throw new JulyException(
@@ -137,8 +134,7 @@ namespace JulyCore.Core
                     }
                     catch (Exception ex)
                     {
-                        JLogger.LogError(
-                            $"{Frameworkconst.TagModuleService} Module {_modules[i].Name} 关闭异常: {ex.Message}");
+                        JLogger.LogException(ex);
                     }
                 }
             }
@@ -161,7 +157,6 @@ namespace JulyCore.Core
                 }
                 catch (Exception ex)
                 {
-                    JLogger.LogError($"{Frameworkconst.TagModuleService} Module {module.Name} Update异常: {ex.Message}");
                     JLogger.LogException(ex);
                 }
             }
@@ -174,7 +169,7 @@ namespace JulyCore.Core
                 try { module.Dispose(); }
                 catch (Exception ex)
                 {
-                    JLogger.LogError($"{Frameworkconst.TagModuleService} 释放Module {module.Name} 时异常: {ex.Message}");
+                    JLogger.LogException(ex);
                 }
             }
 
@@ -201,7 +196,7 @@ namespace JulyCore.Core
                 }
                 catch (Exception ex)
                 {
-                    JLogger.LogError($"{Frameworkconst.TagModuleService} 回滚模块时异常: {ex.Message}");
+                    JLogger.LogException(ex);
                 }
             }
 

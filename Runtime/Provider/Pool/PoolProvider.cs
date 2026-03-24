@@ -184,10 +184,9 @@ namespace JulyCore.Provider.Pool
             return UniTask.CompletedTask;
         }
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             DestroyAllPools();
-            return UniTask.CompletedTask;
         }
 
         public IObjectPool<T> CreatePool<T>(

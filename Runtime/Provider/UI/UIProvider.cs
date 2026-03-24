@@ -188,8 +188,8 @@ namespace JulyCore.Provider.UI
             }
             catch (Exception ex)
             {
-                var msg = $"[{Name}] 加载UI {uiType.Name} 失败: {ex.Message}";
-                LogError(msg);
+                GF.LogException(ex);
+                var msg = $"[{Name}] 加载UI {uiType.Name} 失败";
                 throw new JulyException(msg, ex);
             }
 
@@ -414,7 +414,7 @@ namespace JulyCore.Provider.UI
             }
             catch (Exception ex)
             {
-                LogError($"[{Name}] 预加载UI {uiType.Name} 失败: {ex.Message}");
+                GF.LogException(ex);
             }
 
             return false;
@@ -459,8 +459,7 @@ namespace JulyCore.Provider.UI
             catch (Exception ex)
             {
                 // 捕获所有异常（包括参数验证异常），记录日志但不抛出
-                var typeName = uiType?.Name ?? "Unknown";
-                LogError($"[{Name}] 预加载UI {typeName} 时发生异常: {ex.Message}");
+                GF.LogException(ex);
                 return false;
             }
         }
@@ -481,7 +480,7 @@ namespace JulyCore.Provider.UI
             }
         }
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             // 释放所有预加载的资源
             foreach (var prefab in _preloadedPrefabs.Values)
@@ -512,8 +511,6 @@ namespace JulyCore.Provider.UI
                 UnityEngine.Object.Destroy(_uiRoot.gameObject);
                 _uiRoot = null;
             }
-
-            return base.OnShutdownAsync();
         }
 
         private void CreateUIRoot()

@@ -79,16 +79,8 @@ namespace JulyCore.Core
         /// </summary>
         public async UniTask InitProvidersAsync(CancellationToken cancellationToken = default)
         {
-            try
-            {
-                CancellationToken = cancellationToken;
-                await _providerService.InitAllAsync();
-            }
-            catch (System.Exception ex)
-            {
-                JLogger.LogError($"{Frameworkconst.TagFrameworkContext} Provider 初始化失败: {ex.Message}");
-                throw;
-            }
+            CancellationToken = cancellationToken;
+            await _providerService.InitAllAsync();
         }
 
         /// <summary>
@@ -96,16 +88,8 @@ namespace JulyCore.Core
         /// </summary>
         public async UniTask InitModulesAsync()
         {
-            try
-            {
-                await _moduleService.InitAllAsync();
-                _isInitialized = true;
-            }
-            catch (System.Exception ex)
-            {
-                JLogger.LogError($"{Frameworkconst.TagFrameworkContext} Module 初始化失败: {ex.Message}");
-                throw;
-            }
+            await _moduleService.InitAllAsync();
+            _isInitialized = true;
         }
 
         /// <summary>
@@ -118,24 +102,16 @@ namespace JulyCore.Core
                 return;
             }
 
-            try
-            {
-                JLogger.Log($"{Frameworkconst.TagFrameworkContext} 开始关闭框架");
+            JLogger.Log($"{Frameworkconst.TagFrameworkContext} 开始关闭框架");
 
-                await _moduleService.ShutdownAsync();
+            await _moduleService.ShutdownAsync();
 
-                // 关闭所有Provider
-                await _providerService.ShutdownAllAsync();
+            // 关闭所有Provider
+            _providerService.ShutdownAll();
 
-                _isInitialized = false;
-                CancellationToken = CancellationToken.None;
-                JLogger.Log($"{Frameworkconst.TagFrameworkContext} 框架已关闭");
-            }
-            catch (System.Exception ex)
-            {
-                JLogger.LogError($"{Frameworkconst.TagFrameworkContext} 框架关闭失败: {ex.Message}");
-                throw;
-            }
+            _isInitialized = false;
+            CancellationToken = CancellationToken.None;
+            JLogger.Log($"{Frameworkconst.TagFrameworkContext} 框架已关闭");
         }
 
         /// <summary>

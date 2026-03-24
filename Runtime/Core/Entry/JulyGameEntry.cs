@@ -109,9 +109,7 @@ namespace JulyCore.Core
             }
             catch (System.Exception ex)
             {
-                JLogger.LogError($"{Frameworkconst.TagJulyGameEntry} 框架启动失败: {ex.Message}");
                 JLogger.LogException(ex);
-                throw;
             }
         }
         
@@ -320,7 +318,6 @@ namespace JulyCore.Core
             }
             catch (System.Exception ex)
             {
-                JLogger.LogError($"{Frameworkconst.TagJulyGameEntry} 框架关闭失败: {ex.Message}");
                 JLogger.LogException(ex);
             }
         }

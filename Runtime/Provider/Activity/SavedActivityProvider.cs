@@ -31,10 +31,9 @@ namespace JulyCore.Provider.Activity
                 CancellationToken);
         }
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             _runtimeData = null;
-            return base.OnShutdownAsync();
         }
 
         #endregion

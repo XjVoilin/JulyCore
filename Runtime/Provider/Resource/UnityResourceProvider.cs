@@ -85,7 +85,7 @@ namespace JulyCore.Provider.Resource
             }
             catch (Exception ex)
             {
-                LogError($"[{Name}] 加载资源异常: {path}, 错误: {ex.Message}");
+                GF.LogException(ex);
                 return null;
             }
         }
@@ -124,7 +124,7 @@ namespace JulyCore.Provider.Resource
             }
             catch (Exception ex)
             {
-                LogError($"[{Name}] 预加载资源异常: {path}, 错误: {ex.Message}");
+                GF.LogException(ex);
                 return false;
             }
         }
@@ -163,7 +163,7 @@ namespace JulyCore.Provider.Resource
             }
             catch (Exception ex)
             {
-                LogError($"[{Name}] 加载子资源异常: {path}/{assetName}, 错误: {ex.Message}");
+                GF.LogException(ex);
                 return null;
             }
         }
@@ -191,7 +191,7 @@ namespace JulyCore.Provider.Resource
             }
             catch (Exception ex)
             {
-                LogError($"[{Name}] 加载所有子资源异常: {path}, 错误: {ex.Message}");
+                GF.LogException(ex);
                 return new List<T>();
             }
         }
@@ -252,7 +252,7 @@ namespace JulyCore.Provider.Resource
             }
             catch (Exception ex)
             {
-                LogError($"[{Name}] 卸载资源异常: {ex.Message}");
+                GF.LogException(ex);
             }
         }
 
@@ -270,7 +270,7 @@ namespace JulyCore.Provider.Resource
             }
             catch (Exception ex)
             {
-                LogError($"[{Name}] 卸载所有资源异常: {ex.Message}");
+                GF.LogException(ex);
             }
         }
 
@@ -358,7 +358,7 @@ namespace JulyCore.Provider.Resource
 
         #endregion
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             while (ResourceReleaseQueue.PendingCount > 0)
             {
@@ -367,8 +367,6 @@ namespace JulyCore.Provider.Resource
 
             UnloadAll();
             ResourceReleaseQueue.Clear();
-
-            return UniTask.CompletedTask;
         }
 
         #region Private Methods

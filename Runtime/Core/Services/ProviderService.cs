@@ -58,7 +58,7 @@ namespace JulyCore.Core
                 JLogger.Log($"{Frameworkconst.TagProviderService} {newCount} 个 Provider 初始化完成");
         }
 
-        public async UniTask ShutdownAllAsync()
+        public void ShutdownAll()
         {
             if (!IsInitialized) return;
 
@@ -71,12 +71,11 @@ namespace JulyCore.Core
                 {
                     try
                     {
-                        await provider.ShutdownAsync();
+                        provider.Shutdown();
                     }
                     catch (Exception ex)
                     {
-                        JLogger.LogError(
-                            $"{Frameworkconst.TagProviderService} Provider 关闭异常: {ex.Message}");
+                        JLogger.LogException(ex);
                     }
                 }
             }

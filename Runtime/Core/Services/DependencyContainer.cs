@@ -213,7 +213,8 @@ namespace JulyCore.Core
             }
             catch (Exception ex)
             {
-                JLogger.LogWarning($"{Frameworkconst.TagDependencyContainer} TryResolve<{type.Name}> 失败: {ex.Message}");
+                JLogger.LogWarning(
+                    $"{Frameworkconst.TagDependencyContainer} TryResolve<{type.Name}> 失败: {ex}");
                 return false;
             }
         }
@@ -257,8 +258,7 @@ namespace JulyCore.Core
                     }
                     catch (Exception ex)
                     {
-                        JLogger.LogError(
-                            $"{Frameworkconst.TagDependencyContainer} 释放服务 {instances[i].Key.Name} 时异常: {ex.Message}");
+                        JLogger.LogException(ex);
                     }
                 }
             }

@@ -76,7 +76,7 @@ namespace JulyCore.Provider.Localization
             }
             catch (Exception ex)
             {
-                LogError($"[{Name}] 加载语言包异常 ({languageCode}): {ex.Message}");
+                GF.LogException(ex);
                 return false;
             }
         }
@@ -153,10 +153,9 @@ namespace JulyCore.Provider.Localization
 
         #endregion
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             _languageDataDic.Clear();
-            return UniTask.CompletedTask;
         }
     }
 }

@@ -36,7 +36,7 @@ namespace JulyCore.Module.Data
             }
             catch (Exception ex)
             {
-                LogError($"[{Name}] 获取数据提供者失败: {ex.Message}");
+                GF.LogException(ex);
                 throw;
             }
         }
@@ -61,7 +61,7 @@ namespace JulyCore.Module.Data
             }
             catch (Exception ex)
             {
-                LogError($"[{Name}] 序列化数据失败: {ex.Message}");
+                GF.LogException(ex);
                 throw;
             }
         }
@@ -92,7 +92,7 @@ namespace JulyCore.Module.Data
             }
             catch (Exception ex)
             {
-                LogError($"[{Name}] 反序列化数据失败: {ex.Message}");
+                GF.LogException(ex);
                 throw;
             }
         }
@@ -118,7 +118,7 @@ namespace JulyCore.Module.Data
             }
             catch (Exception ex)
             {
-                LogError($"[{Name}] 异步序列化数据失败: {ex.Message}");
+                GF.LogException(ex);
                 return UniTask.FromException<byte[]>(ex);
             }
         }
@@ -150,7 +150,7 @@ namespace JulyCore.Module.Data
             }
             catch (Exception ex)
             {
-                LogError($"[{Name}] 异步反序列化数据失败: {ex.Message}");
+                GF.LogException(ex);
                 return UniTask.FromException<T>(ex);
             }
         }
@@ -158,22 +158,22 @@ namespace JulyCore.Module.Data
         /// <summary>
         /// 关闭Module
         /// </summary>
-        protected override async UniTask OnShutdownAsync()
+        protected override UniTask OnShutdownAsync()
         {
             if (_serializeProvider != null && _serializeProvider.IsInitialized)
             {
                 try
                 {
-                    // Provider 的 ShutdownAsync 现在直接使用框架级 token
-                    await _serializeProvider.ShutdownAsync();
+                    _serializeProvider.Shutdown();
                 }
                 catch (Exception ex)
                 {
-                    LogError($"[{Name}] 关闭数据提供者时异常: {ex.Message}");
+                    GF.LogException(ex);
                 }
             }
 
             _serializeProvider = null;
+            return UniTask.CompletedTask;
         }
     }
 }

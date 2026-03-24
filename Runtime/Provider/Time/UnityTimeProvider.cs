@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -261,7 +261,7 @@ namespace JulyCore.Provider.Time
                 }
                 catch (Exception ex)
                 {
-                    LogError($"[{Name}] 定时器回调异常 (ID: {timer.Id}): {ex.Message}");
+                    GF.LogException(ex);
                 }
 
                 lock (_timerLock)
@@ -292,7 +292,7 @@ namespace JulyCore.Provider.Time
 
         #region Lifecycle
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             lock (_timerLock)
             {
@@ -300,7 +300,6 @@ namespace JulyCore.Provider.Time
             }
             _isServerTimeSynced = false;
             _serverTimeOffset = 0;
-            return UniTask.CompletedTask;
         }
 
         #endregion

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -56,10 +56,9 @@ namespace JulyCore.Provider.Config
             return false;
         }
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             _tables.Clear();
-            return base.OnShutdownAsync();
         }
     }
 }

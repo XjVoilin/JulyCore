@@ -39,7 +39,7 @@ namespace JulyCore
                 {
                     _context.ProviderService.Untrack(oldProvider);
                     if (oldProvider.IsInitialized)
-                        await oldProvider.ShutdownAsync();
+                        oldProvider.Shutdown();
                 }
             }
 

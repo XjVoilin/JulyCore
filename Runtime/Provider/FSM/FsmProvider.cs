@@ -120,10 +120,9 @@ namespace JulyCore.Provider.Fsm
             return UniTask.CompletedTask;
         }
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             DestroyAllFsms();
-            return UniTask.CompletedTask;
         }
 
         public IFsm CreateFsm(

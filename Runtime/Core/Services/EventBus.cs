@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -175,7 +175,7 @@ namespace JulyCore.Core
                 }
                 catch (Exception ex)
                 {
-                    JLogger.LogError($"{Frameworkconst.TagEventBus} 延迟执行处理器异常: {ex.Message}");
+                    JLogger.LogException(ex);
                 }
             }
         }
@@ -348,8 +348,7 @@ namespace JulyCore.Core
                 count = ++_handlerExceptionCounts[handler];
             }
 
-            JLogger.LogError(
-                $"{Frameworkconst.TagEventBus} 处理事件 {eventType.Name} 时异常 (第 {count} 次): {ex.Message}");
+            JLogger.LogException(ex);
 
             if (count >= _config.handlerExceptionThreshold)
             {

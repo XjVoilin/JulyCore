@@ -61,35 +61,18 @@ namespace JulyCore.Provider.Base
                 return;
             }
 
-            try
-            {
-                await OnInitAsync();
-                _isInitialized = true;
-            }
-            catch (Exception ex)
-            {
-                JLogger.LogError($"[{Name}] Provider 初始化失败: {ex.Message}");
-                throw;
-            }
+            await OnInitAsync();
+            _isInitialized = true;
         }
 
         /// <summary>
         /// 关闭 Provider
         /// </summary>
-        public async UniTask ShutdownAsync()
+        public void Shutdown()
         {
             if (!_isInitialized) return;
-
-            try
-            {
-                await OnShutdownAsync();
-                _isInitialized = false;
-            }
-            catch (Exception ex)
-            {
-                JLogger.LogError($"[{Name}] Provider 关闭失败: {ex.Message}");
-                throw;
-            }
+            _isInitialized = false;
+            OnShutdown();
         }
 
         /// <summary>
@@ -100,7 +83,7 @@ namespace JulyCore.Provider.Base
         /// <summary>
         /// 子类实现：具体的关闭逻辑
         /// </summary>
-        protected virtual UniTask OnShutdownAsync() => UniTask.CompletedTask;
+        protected virtual void OnShutdown() { }
 
         #region Provider 日志方法
 

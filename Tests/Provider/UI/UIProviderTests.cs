@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
@@ -45,7 +45,7 @@ namespace JulyGF.Tests.Provider.UI
         [TearDown]
         public void TearDown()
         {
-            _provider?.ShutdownAsync().GetAwaiter().GetResult();
+            _provider?.Shutdown();
             _context.ProviderService.Clear();
             _context.Container.Clear();
             _provider = null;

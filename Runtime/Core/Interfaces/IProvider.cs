@@ -1,4 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 
 namespace JulyCore.Core
 {
@@ -31,7 +31,6 @@ namespace JulyCore.Core
         /// 框架关闭时调用，用于清理资源但保留实例
         /// 使用框架级 CancellationToken（从 FrameworkContext 获取）
         /// </summary>
-        /// <returns>关闭任务</returns>
-        UniTask ShutdownAsync();
+        void Shutdown();
     }
 }

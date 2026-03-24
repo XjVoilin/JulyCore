@@ -37,8 +37,7 @@ namespace JulyCore.Provider.Data
             }
             catch (Exception ex)
             {
-                LogError($"[{Name}] 序列化失败: {ex.Message}");
-                JLogger.LogException(ex);
+                GF.LogException(ex);
                 throw;
             }
         }
@@ -61,8 +60,7 @@ namespace JulyCore.Provider.Data
             }
             catch (Exception ex)
             {
-                LogError($"[{Name}] 反序列化失败: {ex.Message}");
-                JLogger.LogException(ex);
+                GF.LogException(ex);
                 throw;
             }
         }
@@ -104,8 +102,7 @@ namespace JulyCore.Provider.Data
             }
             catch (Exception ex)
             {
-                LogError($"[{Name}] 序列化为JSON失败: {ex.Message}");
-                JLogger.LogException(ex);
+                GF.LogException(ex);
                 throw;
             }
         }
@@ -127,8 +124,7 @@ namespace JulyCore.Provider.Data
             }
             catch (Exception ex)
             {
-                LogError($"[{Name}] 从JSON反序列化失败: Type={type.Name}, Error={ex.Message}");
-                JLogger.LogException(ex);
+                GF.LogException(ex);
                 throw;
             }
         }
@@ -138,11 +134,6 @@ namespace JulyCore.Provider.Data
         #region 生命周期
 
         protected override UniTask OnInitAsync()
-        {
-            return UniTask.CompletedTask;
-        }
-
-        protected override UniTask OnShutdownAsync()
         {
             return UniTask.CompletedTask;
         }

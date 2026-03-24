@@ -32,14 +32,13 @@ namespace JulyCore.Provider.Task
             return UniTask.CompletedTask;
         }
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             lock (_lock)
             {
                 _storage.Clear();
                 _conditionIndex.Clear();
             }
-            return UniTask.CompletedTask;
         }
 
         #region 数据存储（CRUD）

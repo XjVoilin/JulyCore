@@ -31,14 +31,13 @@ namespace JulyCore.Provider.ABTest
             return UniTask.CompletedTask;
         }
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             lock (_lock)
             {
                 _experiments.Clear();
                 _assignments.Clear();
             }
-            return UniTask.CompletedTask;
         }
 
         #region 实验存储（CRUD）

@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using Cysharp.Threading.Tasks;
 using JulyCore.Core;
 using JulyCore.Provider.Base;
@@ -82,16 +82,17 @@ namespace JulyGF.Tests.Core
         }
 
         [UnityTest]
-        public IEnumerator ShutdownAllAsync_InitializedProviders_ShouldShutdownAll()
+        public IEnumerator ShutdownAll_InitializedProviders_ShouldShutdownAll()
         {
             var provider = new TestProvider();
             _providerService.Track(provider);
             yield return _providerService.InitAllAsync().ToCoroutine();
 
-            yield return _providerService.ShutdownAllAsync().ToCoroutine();
+            _providerService.ShutdownAll();
 
             Assert.IsFalse(_providerService.IsInitialized);
             Assert.IsFalse(provider.IsInitialized);
+            yield break;
         }
 
         [Test]
