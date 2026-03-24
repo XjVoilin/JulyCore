@@ -575,6 +575,7 @@ namespace JulyCore.Provider.UI
             canvas.worldCamera = _uiCamera;
             canvas.sortingOrder = (int)layer;
             canvas.planeDistance = _uiConfig?.PlaneDistance ?? 100f;
+            canvas.vertexColorAlwaysGammaSpace = true;
             
             var scaler = layerObj.AddComponent<CanvasScaler>();
             ApplyCanvasScaler(scaler);
@@ -1064,6 +1065,7 @@ namespace JulyCore.Provider.UI
             var canvas = containerObj.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 9999;
+            canvas.vertexColorAlwaysGammaSpace = true;
 
             var scaler = containerObj.AddComponent<CanvasScaler>();
             if (_uiConfig != null)
