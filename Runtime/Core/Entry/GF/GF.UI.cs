@@ -26,7 +26,7 @@ namespace JulyCore
                 {
                     if (_provider == null)
                     {
-                        _context.Container.TryResolve(out _provider);
+                        _context.Registry.TryResolve(out _provider);
                     }
 
                     return _provider;

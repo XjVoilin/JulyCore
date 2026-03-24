@@ -10,7 +10,7 @@ namespace JulyCore.Core
     /// </summary>
     internal class FrameworkContext
     {
-        private IDependencyContainer _container;
+        private IServiceRegistry _registry;
         private IModuleService _moduleService;
         private IProviderService _providerService;
         private IEventBus _eventBus;
@@ -21,9 +21,9 @@ namespace JulyCore.Core
         public static FrameworkContext Instance => _instance;
 
         /// <summary>
-        /// 依赖注入容器
+        /// 服务注册表（DI）
         /// </summary>
-        public IDependencyContainer Container => _container;
+        public IServiceRegistry Registry => _registry;
 
         /// <summary>
         /// 模块服务
@@ -58,20 +58,17 @@ namespace JulyCore.Core
         /// </summary>
         private void InitializeServices()
         {
-            // 创建依赖注入容器
-            _container = new DependencyContainer();
+            _registry = new ServiceRegistry();
 
-            // 创建核心服务
             _moduleService = new ModuleService();
             _providerService = new ProviderService();
             _eventBus = new EventBus(_frameworkConfig.EventBusConfig);
 
-            // 注册核心服务到容器
-            _container.RegisterSingleton(_container);
-            _container.RegisterSingleton(_moduleService);
-            _container.RegisterSingleton(_providerService);
-            _container.RegisterSingleton(_eventBus);
-            _container.RegisterSingleton(_frameworkConfig);
+            _registry.Register<IServiceRegistry>(_registry);
+            _registry.Register<IModuleService>(_moduleService);
+            _registry.Register<IProviderService>(_providerService);
+            _registry.Register<IEventBus>(_eventBus);
+            _registry.Register(_frameworkConfig);
         }
 
         /// <summary>
@@ -139,7 +136,7 @@ namespace JulyCore.Core
             _moduleService?.Clear();
             _providerService?.Clear();
             _eventBus?.Clear();
-            _container?.Clear();
+            _registry?.Clear();
             _isInitialized = false;
         }
 

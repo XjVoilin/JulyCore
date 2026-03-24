@@ -8,6 +8,7 @@ namespace JulyCore.Provider.Platform
     {
         int PlatformType { get; }
         T GetService<T>() where T : class;
+        void EarlyBoot() { }
         UniTask ColdLaunchAsync() => UniTask.CompletedTask;
         Rect GetSafeArea() => Screen.safeArea;
     }

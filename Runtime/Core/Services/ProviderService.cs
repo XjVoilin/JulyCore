@@ -8,7 +8,7 @@ namespace JulyCore.Core
     /// <summary>
     /// Provider 生命周期管理器
     /// 仅负责 Init/Shutdown 的统一调度，不负责服务定位
-    /// Provider 的注册和获取通过 IDependencyContainer 统一处理
+    /// Provider 的注册和获取通过 IServiceRegistry 统一处理
     /// </summary>
     internal class ProviderService : IProviderService
     {

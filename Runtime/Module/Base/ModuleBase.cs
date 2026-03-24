@@ -56,11 +56,11 @@ namespace JulyCore.Module.Base
         protected FrameworkConfig FrameworkConfig => _context.FrameworkConfig;
 
         /// <summary>
-        /// 获取 Provider（通过 DI 容器）
+        /// 获取 Provider（通过 ServiceRegistry）
         /// </summary>
         protected T GetProvider<T>() where T : IProvider
         {
-            var result = _context.Container.Resolve<T>();
+            var result = _context.Registry.Resolve<T>();
             if (result == null)
             {
                 var type = typeof(T);

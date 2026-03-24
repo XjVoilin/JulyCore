@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using Cysharp.Threading.Tasks;
 using JulyCore.Core;
@@ -24,8 +24,7 @@ namespace JulyGF.Tests.Module
             _context = FrameworkContext.Instance;
             _provider = new MockSerializeProvider();
             
-            // 使用新的 DI 容器注册方式
-            _context.Container.RegisterSingleton<ISerializeProvider>(_provider);
+            _context.Registry.Register<ISerializeProvider>(_provider);
             _context.ProviderService.Track(_provider);
             _module = new SerializeModule();
         }
@@ -36,7 +35,7 @@ namespace JulyGF.Tests.Module
             _module?.ShutdownAsync().GetAwaiter().GetResult();
             _module?.Dispose();
             _context.ProviderService.Clear();
-            _context.Container.Clear();
+            _context.Registry.Clear();
             _module = null;
             _provider = null;
         }

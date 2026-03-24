@@ -20,7 +20,7 @@ namespace JulyCore.Provider.UI
         private void Awake()
         {
             _rect = GetComponent<RectTransform>();
-            FrameworkContext.Instance?.Container?.TryResolve(out _platform);
+            FrameworkContext.Instance?.Registry?.TryResolve(out _platform);
         }
 
         private void OnEnable()

@@ -32,13 +32,11 @@ namespace JulyGF.Tests.Provider.UI
             _context = FrameworkContext.Instance;
             _resourceProvider = new MockResourceProvider();
             
-            // 使用新的 DI 容器注册方式
-            _context.Container.RegisterSingleton<IResourceProvider>(_resourceProvider);
+            _context.Registry.Register<IResourceProvider>(_resourceProvider);
             _context.ProviderService.Track(_resourceProvider);
             
-            // UIProvider 现在需要构造函数参数
             _provider = new UIProvider(_resourceProvider, null);
-            _context.Container.RegisterSingleton<IUIProvider>(_provider);
+            _context.Registry.Register<IUIProvider>(_provider);
             _context.ProviderService.Track(_provider);
         }
 
@@ -47,7 +45,7 @@ namespace JulyGF.Tests.Provider.UI
         {
             _provider?.Shutdown();
             _context.ProviderService.Clear();
-            _context.Container.Clear();
+            _context.Registry.Clear();
             _provider = null;
             _resourceProvider = null;
         }

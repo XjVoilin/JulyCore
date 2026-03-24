@@ -5,7 +5,7 @@ namespace JulyCore.Core
     /// <summary>
     /// Provider服务接口
     /// 仅负责 Provider 的生命周期管理（Init/Shutdown）
-    /// Provider 的注册和获取通过 IDependencyContainer 统一处理
+    /// Provider 的注册和获取通过 IServiceRegistry 统一处理
     /// </summary>
     public interface IProviderService
     {

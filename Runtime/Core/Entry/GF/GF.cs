@@ -15,8 +15,6 @@ namespace JulyCore
         /// <summary>
         /// 获取模块
         /// </summary>
-        /// <typeparam name="T">模块类型</typeparam>
-        /// <returns>模块实例，如果未注册则返回 null</returns>
         private static T GetModule<T>() where T : IModule
         {
             var module = _context.ModuleService.GetModule<T>();
@@ -28,5 +26,15 @@ namespace JulyCore
 
             return module;
         }
+
+        /// <summary>
+        /// 从服务注册表解析已注册的服务实例
+        /// </summary>
+        public static T Resolve<T>() => _context.Registry.Resolve<T>();
+
+        /// <summary>
+        /// 尝试从服务注册表解析已注册的服务实例
+        /// </summary>
+        public static bool TryResolve<T>(out T instance) => _context.Registry.TryResolve(out instance);
     }
 }
