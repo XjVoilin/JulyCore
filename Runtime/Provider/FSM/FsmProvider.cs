@@ -42,8 +42,8 @@ namespace JulyCore.Provider.Fsm
             // 调用初始状态的 OnEnter
             if (_states.TryGetValue(defaultState, out var defaultInstance))
             {
-                defaultInstance.OnEnter();
                 _currentInstance = defaultInstance;
+                defaultInstance.OnEnter();
             }
         }
 
