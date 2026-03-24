@@ -11,6 +11,8 @@ namespace JulyCore.Module.Platform
 
         protected override LogChannel LogChannel => LogChannel.Platform;
         public override int Priority => Frameworkconst.PriorityPlatformModule;
+        
+        public int PlatformType => _provider.PlatformType;
 
         protected override UniTask OnInitAsync()
         {

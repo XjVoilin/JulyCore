@@ -17,6 +17,8 @@ namespace JulyCore
                     return _module;
                 }
             }
+            
+            public static int PlatformType => Module.PlatformType;
 
             public static T GetService<T>() where T : class
             {

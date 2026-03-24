@@ -5,6 +5,7 @@ namespace JulyCore.Provider.Platform
 {
     public class NullPlatformProvider : ProviderBase, IPlatformProvider
     {
+        public int PlatformType => 0;
         protected override LogChannel LogChannel => LogChannel.Platform;
         public override int Priority => Frameworkconst.PriorityPlatformProvider;
 
