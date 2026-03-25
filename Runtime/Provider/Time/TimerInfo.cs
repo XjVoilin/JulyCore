@@ -1,56 +1,46 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 
 namespace JulyCore.Provider.Time
 {
     /// <summary>
-    /// 定时器信息
+    /// 定时器信息（池化复用，避免高频 new 产生 GC）
     /// </summary>
     internal class TimerInfo
     {
-        /// <summary>
-        /// 定时器ID
-        /// </summary>
-        public int Id { get; set; }
+        private static readonly Stack<TimerInfo> Pool = new(32);
 
-        /// <summary>
-        /// 间隔时间（秒）
-        /// </summary>
-        public float Interval { get; set; }
+        public int Id;
+        public float Interval;
+        public float RemainingTime;
+        public Action Callback;
+        public bool UseRealTime;
+        public bool IsRepeat;
+        public int RemainingRepeatCount;
+        public bool IsPaused;
+        public bool IsCancelled;
 
-        /// <summary>
-        /// 剩余时间（秒）
-        /// </summary>
-        public float RemainingTime { get; set; }
+        public static TimerInfo Rent()
+        {
+            return Pool.Count > 0 ? Pool.Pop() : new TimerInfo();
+        }
 
-        /// <summary>
-        /// 回调函数
-        /// </summary>
-        public Action Callback { get; set; }
+        public static void Return(TimerInfo info)
+        {
+            if (info == null) return;
+            info.Id = 0;
+            info.Interval = 0f;
+            info.RemainingTime = 0f;
+            info.Callback = null;
+            info.UseRealTime = false;
+            info.IsRepeat = false;
+            info.RemainingRepeatCount = 0;
+            info.IsPaused = false;
+            info.IsCancelled = false;
+            Pool.Push(info);
+        }
 
-        /// <summary>
-        /// 是否使用真实时间
-        /// </summary>
-        public bool UseRealTime { get; set; }
-
-        /// <summary>
-        /// 是否重复执行
-        /// </summary>
-        public bool IsRepeat { get; set; }
-
-        /// <summary>
-        /// 剩余重复次数（-1表示无限）
-        /// </summary>
-        public int RemainingRepeatCount { get; set; }
-
-        /// <summary>
-        /// 是否暂停
-        /// </summary>
-        public bool IsPaused { get; set; }
-
-        /// <summary>
-        /// 是否已取消
-        /// </summary>
-        public bool IsCancelled { get; set; }
+        public static void ClearPool() => Pool.Clear();
     }
 }
 

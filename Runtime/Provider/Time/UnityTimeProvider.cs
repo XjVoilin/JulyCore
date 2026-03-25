@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -21,12 +20,11 @@ namespace JulyCore.Provider.Time
         public override int Priority => Frameworkconst.PriorityTimeProvider;
         protected override LogChannel LogChannel => LogChannel.Time;
 
-        // 定时器技术层数据存储
         private readonly Dictionary<int, TimerInfo> _timers = new();
-        private readonly List<int> _timersToRemove = new();
+        private readonly List<TimerInfo> _snapshot = new(16);
+        private readonly List<int> _timersToRemove = new(8);
         private readonly object _timerLock = new();
 
-        // 服务器时间偏移（技术层数据，由Module层管理业务状态）
         private bool _isServerTimeSynced;
         private double _serverTimeOffset;
 
@@ -127,30 +125,23 @@ namespace JulyCore.Provider.Time
         public void RegisterTimer(int timerId, float delay, Action callback, bool useRealTime = false)
         {
             if (callback == null)
-            {
                 throw new ArgumentNullException(nameof(callback));
-            }
 
-            if (delay < 0)
-            {
-                delay = 0;
-            }
+            if (delay < 0) delay = 0;
 
             lock (_timerLock)
             {
-                var timer = new TimerInfo
-                {
-                    Id = timerId,
-                    Interval = delay,
-                    RemainingTime = delay,
-                    Callback = callback,
-                    UseRealTime = useRealTime,
-                    IsRepeat = false,
-                    RemainingRepeatCount = 1,
-                    IsPaused = false,
-                    IsCancelled = false
-                };
+                if (_timers.TryGetValue(timerId, out var old))
+                    TimerInfo.Return(old);
 
+                var timer = TimerInfo.Rent();
+                timer.Id = timerId;
+                timer.Interval = delay;
+                timer.RemainingTime = delay;
+                timer.Callback = callback;
+                timer.UseRealTime = useRealTime;
+                timer.IsRepeat = false;
+                timer.RemainingRepeatCount = 1;
                 _timers[timerId] = timer;
             }
         }
@@ -158,30 +149,23 @@ namespace JulyCore.Provider.Time
         public void RegisterRepeatTimer(int timerId, float interval, Action callback, bool useRealTime = false, int repeatCount = -1)
         {
             if (callback == null)
-            {
                 throw new ArgumentNullException(nameof(callback));
-            }
 
-            if (interval <= 0)
-            {
-                interval = 0.001f; // 最小间隔
-            }
+            if (interval <= 0) interval = 0.001f;
 
             lock (_timerLock)
             {
-                var timer = new TimerInfo
-                {
-                    Id = timerId,
-                    Interval = interval,
-                    RemainingTime = interval,
-                    Callback = callback,
-                    UseRealTime = useRealTime,
-                    IsRepeat = true,
-                    RemainingRepeatCount = repeatCount,
-                    IsPaused = false,
-                    IsCancelled = false
-                };
+                if (_timers.TryGetValue(timerId, out var old))
+                    TimerInfo.Return(old);
 
+                var timer = TimerInfo.Rent();
+                timer.Id = timerId;
+                timer.Interval = interval;
+                timer.RemainingTime = interval;
+                timer.Callback = callback;
+                timer.UseRealTime = useRealTime;
+                timer.IsRepeat = true;
+                timer.RemainingRepeatCount = repeatCount;
                 _timers[timerId] = timer;
             }
         }
@@ -227,26 +211,26 @@ namespace JulyCore.Provider.Time
 
         public void UpdateTimers(float deltaTime, float unscaledDeltaTime)
         {
+            _snapshot.Clear();
             _timersToRemove.Clear();
-
-            KeyValuePair<int, TimerInfo>[] snapshot;
 
             lock (_timerLock)
             {
-                snapshot = _timers.ToArray();
+                foreach (var kvp in _timers)
+                    _snapshot.Add(kvp.Value);
             }
 
-            foreach (var kvp in snapshot)
+            for (int i = 0, count = _snapshot.Count; i < count; i++)
             {
-                TimerInfo timer;
+                var timer = _snapshot[i];
 
-                lock (_timerLock)
+                if (timer.IsCancelled)
                 {
-                    if (!_timers.TryGetValue(kvp.Key, out timer))
-                        continue;
+                    _timersToRemove.Add(timer.Id);
+                    continue;
                 }
 
-                if (timer.IsCancelled || timer.IsPaused)
+                if (timer.IsPaused)
                     continue;
 
                 var dt = timer.UseRealTime ? unscaledDeltaTime : deltaTime;
@@ -264,25 +248,33 @@ namespace JulyCore.Provider.Time
                     GF.LogException(ex);
                 }
 
+                if (timer.IsRepeat)
+                {
+                    if (timer.RemainingRepeatCount > 0)
+                        timer.RemainingRepeatCount--;
+
+                    if (timer.RemainingRepeatCount == 0)
+                        _timersToRemove.Add(timer.Id);
+                    else
+                        timer.RemainingTime += timer.Interval;
+                }
+                else
+                {
+                    _timersToRemove.Add(timer.Id);
+                }
+            }
+
+            if (_timersToRemove.Count > 0)
+            {
                 lock (_timerLock)
                 {
-                    if (timer.IsRepeat)
+                    for (int i = 0, count = _timersToRemove.Count; i < count; i++)
                     {
-                        if (timer.RemainingRepeatCount > 0)
-                            timer.RemainingRepeatCount--;
-
-                        if (timer.RemainingRepeatCount == 0)
+                        var id = _timersToRemove[i];
+                        if (_timers.Remove(id, out var removed))
                         {
-                            _timers.Remove(timer.Id);
+                            TimerInfo.Return(removed);
                         }
-                        else
-                        {
-                            timer.RemainingTime += timer.Interval;
-                        }
-                    }
-                    else
-                    {
-                        _timers.Remove(timer.Id);
                     }
                 }
             }
@@ -296,8 +288,12 @@ namespace JulyCore.Provider.Time
         {
             lock (_timerLock)
             {
+                foreach (var kvp in _timers)
+                    TimerInfo.Return(kvp.Value);
                 _timers.Clear();
             }
+            _snapshot.Clear();
+            _timersToRemove.Clear();
             _isServerTimeSynced = false;
             _serverTimeOffset = 0;
         }

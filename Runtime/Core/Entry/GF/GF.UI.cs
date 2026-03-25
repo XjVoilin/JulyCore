@@ -79,6 +79,25 @@ namespace JulyCore
                 Open(options, cancellationToken);
             }
 
+            /// <summary>
+            /// 通过窗口 ID 异步打开 UI（从配置提供者查找完整参数）。
+            /// </summary>
+            public static async UniTask<UIBase> OpenAsync(int windowId, object data = null,
+                CancellationToken cancellationToken = default)
+            {
+                if (_windowConfigProvider == null)
+                {
+                    JLogger.LogWarning("[GF.UI] IUIWindowConfigProvider 未设置，请在初始化时调用 SetWindowConfig");
+                    return null;
+                }
+
+                var options = _windowConfigProvider.GetUIOpenOptions(windowId);
+                if (options == null) return null;
+
+                options.Data = data;
+                return await OpenAsync(options, cancellationToken);
+            }
+
             #endregion
 
             #region 业务层方法（通过 UIModule，有栈管理和事件发布）
