@@ -32,12 +32,10 @@ namespace JulyCore.Core
                 var ctx = new LaunchContext(
                     frameworkConfig,
                     destroyCancellationToken,
-                    context.Registry,
-                    context.ModuleService,
-                    context.ProviderService,
-                    context);
-
-                ctx.OnCoreReady = () => _coreReady = true;
+                    context)
+                {
+                    OnCoreReady = () => _coreReady = true
+                };
 
                 var pipeline = new LaunchPipeline();
                 ConfigurePipeline(pipeline);

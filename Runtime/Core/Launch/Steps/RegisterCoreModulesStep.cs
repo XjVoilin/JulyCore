@@ -12,7 +12,7 @@ using JulyCore.Module.Time;
 
 namespace JulyCore.Core.Launch.Steps
 {
-    public class RegisterCoreModules : ILaunchStep
+    public class RegisterCoreModulesStep : ILaunchStep
     {
         public string Name => "Register Core Modules";
 

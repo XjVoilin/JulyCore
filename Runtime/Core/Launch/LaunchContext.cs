@@ -24,16 +24,13 @@ namespace JulyCore.Core.Launch
         internal LaunchContext(
             FrameworkConfig config,
             CancellationToken token,
-            IServiceRegistry registry,
-            IModuleService moduleService,
-            IProviderService providerService,
             FrameworkContext frameworkContext)
         {
             Config = config;
             Token = token;
-            Registry = registry;
-            _moduleService = moduleService;
-            _providerService = providerService;
+            Registry = frameworkContext.Registry;
+            _moduleService = frameworkContext.ModuleService;
+            _providerService = frameworkContext.ProviderService;
             _frameworkContext = frameworkContext;
         }
 

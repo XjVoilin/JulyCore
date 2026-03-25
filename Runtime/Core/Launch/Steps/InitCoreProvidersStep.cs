@@ -3,7 +3,7 @@ using JulyCore.Core.Launch;
 
 namespace JulyCore.Core.Launch.Steps
 {
-    public class InitCoreProviders : ILaunchStep
+    public class InitCoreProvidersStep : ILaunchStep
     {
         public string Name => "Init Core Providers";
 
