@@ -7,6 +7,11 @@ namespace JulyCore.Core
     {
         private readonly Dictionary<Type, object> _services = new();
 
+        /// <summary>
+        /// 注册服务实例。同键重复注册会覆盖（打 Warning）。
+        /// 设计意图：Provider 可替换是核心需求（平台切换、AOT/热更覆盖），
+        /// 因此 Registry 允许覆盖而非抛异常。
+        /// </summary>
         public void Register<T>(T instance)
         {
             if (instance == null) throw new ArgumentNullException(nameof(instance));

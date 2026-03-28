@@ -1,6 +1,22 @@
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using JulyCore.Core.Config;
+using JulyCore.Module.Analytics;
+using JulyCore.Module.Data;
+using JulyCore.Module.Fsm;
+using JulyCore.Module.Http;
+using JulyCore.Module.Performance;
+using JulyCore.Module.Platform;
+using JulyCore.Module.Pool;
+using JulyCore.Module.Time;
+using JulyCore.Provider.Data;
+using JulyCore.Provider.Encryption;
+using JulyCore.Provider.Fsm;
+using JulyCore.Provider.Http;
+using JulyCore.Provider.Performance;
+using JulyCore.Provider.Platform;
+using JulyCore.Provider.Pool;
+using JulyCore.Provider.Time;
 
 namespace JulyCore.Core
 {
@@ -51,6 +67,46 @@ namespace JulyCore.Core
         {
             _frameworkConfig = frameworkConfig;
             InitializeServices();
+            RegisterDefaultModules();
+            RegisterDefaultProviders();
+        }
+
+        internal void RegisterProvider<T>(T provider) where T : IProvider
+        {
+            _registry.Register<T>(provider);
+            _providerService.Track(provider);
+        }
+
+        internal void ReplaceProvider<T>(T newProvider) where T : IProvider
+        {
+            if (_registry.TryResolve<T>(out var old) && old is IProvider oldProvider)
+                _providerService.Untrack(oldProvider);
+            _registry.Register<T>(newProvider);
+            _providerService.Track(newProvider);
+        }
+
+        private void RegisterDefaultModules()
+        {
+            _moduleService.RegisterModule<TimeModule>();
+            _moduleService.RegisterModule<SerializeModule>();
+            _moduleService.RegisterModule<PoolModule>();
+            _moduleService.RegisterModule<FsmModule>();
+            _moduleService.RegisterModule<HttpModule>();
+            _moduleService.RegisterModule<PlatformModule>();
+            _moduleService.RegisterModule<PerformanceModule>();
+            _moduleService.RegisterModule<AnalyticsModule>();
+        }
+
+        private void RegisterDefaultProviders()
+        {
+            RegisterProvider<ITimeProvider>(new UnityTimeProvider());
+            RegisterProvider<ISerializeProvider>(new JsonSerializeProvider());
+            RegisterProvider<IPoolProvider>(new PoolProvider());
+            RegisterProvider<IFsmProvider>(new FsmProvider());
+            RegisterProvider<IHttpProvider>(new HttpProvider());
+            RegisterProvider<IPlatformProvider>(new DefaultPlatformProvider());
+            RegisterProvider<IPerformanceProvider>(new UnityPerformanceProvider());
+            RegisterProvider<IEncryptionProvider>(new NoEncryptionProvider());
         }
 
         /// <summary>

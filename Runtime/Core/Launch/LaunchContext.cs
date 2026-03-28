@@ -19,7 +19,6 @@ namespace JulyCore.Core.Launch
 
         private readonly FrameworkContext _frameworkContext;
         private readonly IModuleService _moduleService;
-        private readonly IProviderService _providerService;
 
         internal LaunchContext(
             FrameworkConfig config,
@@ -30,15 +29,17 @@ namespace JulyCore.Core.Launch
             Token = token;
             Registry = frameworkContext.Registry;
             _moduleService = frameworkContext.ModuleService;
-            _providerService = frameworkContext.ProviderService;
             _frameworkContext = frameworkContext;
         }
 
         public void RegisterModule<T>() where T : IModule, new()
             => _moduleService.RegisterModule<T>();
 
-        public void TrackProvider(IProvider provider)
-            => _providerService.Track(provider);
+        public void RegisterProvider<T>(T provider) where T : IProvider
+            => _frameworkContext.RegisterProvider(provider);
+
+        public void ReplaceProvider<T>(T newProvider) where T : IProvider
+            => _frameworkContext.ReplaceProvider(newProvider);
 
         public async UniTask InitProvidersAsync()
             => await _frameworkContext.InitProvidersAsync(Token);

@@ -29,6 +29,8 @@ namespace JulyCore.Core
                 throw new ArgumentNullException(nameof(module));
 
             var moduleType = module.GetType();
+            // 设计意图：Module 是唯一实例，重复注册意味着代码 bug，因此抛异常。
+            // 与 ServiceRegistry 允许覆盖不同 — Provider 可替换，Module 不可。
             if (_moduleDic.ContainsKey(moduleType))
                 throw new JulyException($"模块 {moduleType.Name} 已经注册");
 

@@ -18,8 +18,7 @@ namespace JulyCore
                     $"[GF] FrameworkContext 尚未初始化，无法注册 Provider: {instance?.GetType().Name}");
             if (instance == null) throw new ArgumentNullException(nameof(instance));
 
-            _context.Registry.Register(instance);
-            _context.ProviderService.Track(instance);
+            _context.RegisterProvider(instance);
         }
 
         /// <summary>
@@ -35,12 +34,10 @@ namespace JulyCore
 
             if (_context.Registry.TryResolve<TInterface>(out var old) && old is IProvider oldProvider)
             {
-                _context.ProviderService.Untrack(oldProvider);
                 if (oldProvider.IsInitialized) oldProvider.Shutdown();
             }
 
-            _context.Registry.Register(instance);
-            _context.ProviderService.Track(instance);
+            _context.ReplaceProvider(instance);
             if (!instance.IsInitialized)
                 await instance.InitAsync();
         }
