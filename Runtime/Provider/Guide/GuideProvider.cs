@@ -10,7 +10,7 @@ namespace JulyCore.Provider.Guide
     /// 引导存储提供者实现
     /// 纯技术层：仅负责引导状态存储，不包含业务逻辑
     /// </summary>
-    internal class GuideProvider : ProviderBase, IGuideProvider
+    public class GuideProvider : ProviderBase, IGuideProvider
     {
         public override int Priority => Frameworkconst.PriorityGuideProvider;
         protected override LogChannel LogChannel => LogChannel.Guide;

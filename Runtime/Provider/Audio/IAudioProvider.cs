@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
@@ -60,7 +60,7 @@ namespace JulyCore.Provider.Audio
     /// <summary>
     /// 音频播放选项
     /// </summary>
-    internal class AudioPlayOptions
+    public class AudioPlayOptions
     {
         /// <summary>
         /// 音量（0-1）
@@ -114,7 +114,7 @@ namespace JulyCore.Provider.Audio
     /// 不包含任何业务语义，不维护业务状态
     /// 所有操作都基于 AudioHandle，由 Module 管理 Handle 的生命周期和业务逻辑
     /// </summary>
-    internal interface IAudioProvider : Core.IProvider
+    public interface IAudioProvider : Core.IProvider
     {
         #region 音频播放（纯技术操作）
 

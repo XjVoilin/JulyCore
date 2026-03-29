@@ -12,7 +12,7 @@ namespace JulyCore.Provider.ABTest
     /// AB测试存储提供者实现
     /// 纯技术层：仅负责实验数据存储、分配记录管理
     /// </summary>
-    internal class ABTestProvider : ProviderBase, IABTestProvider
+    public class ABTestProvider : ProviderBase, IABTestProvider
     {
         public override int Priority => Frameworkconst.PriorityABTestProvider;
         protected override LogChannel LogChannel => LogChannel.ABTest;

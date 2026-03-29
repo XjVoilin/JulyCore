@@ -17,7 +17,7 @@ namespace JulyCore.Provider.RedDot
     /// - 全局启用开关是数据查询的过滤条件，不是业务规则
     /// - 这些逻辑放在 Provider 中是为了保证数据一致性和查询性能
     /// </summary>
-    internal class RedDotProvider : ProviderBase, IRedDotProvider
+    public class RedDotProvider : ProviderBase, IRedDotProvider
     {
         public override int Priority => Frameworkconst.PriorityRedDotProvider;
         protected override LogChannel LogChannel => LogChannel.RedDot;

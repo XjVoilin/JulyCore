@@ -16,7 +16,7 @@ namespace JulyCore.Provider.Audio
     /// 纯技术执行层：负责资源加载、AudioSource操作、播放控制
     /// 不包含任何业务语义，不维护业务状态
     /// </summary>
-    internal class UnityAudioProvider : ProviderBase, IAudioProvider
+    public class UnityAudioProvider : ProviderBase, IAudioProvider
     {
         public override int Priority => Frameworkconst.PriorityAudioProvider;
         protected override LogChannel LogChannel => LogChannel.Audio;

@@ -64,7 +64,7 @@ namespace JulyCore.Provider.UI
     /// 纯技术执行层：负责资源加载、UI实例化、GameObject操作
     /// 不包含任何业务语义，不维护业务状态
     /// </summary>
-    internal class UIProvider : ProviderBase, IUIProvider
+    public class UIProvider : ProviderBase, IUIProvider
     {
         public override int Priority => Frameworkconst.PriorityUIProvider;
         protected override LogChannel LogChannel => LogChannel.UI;

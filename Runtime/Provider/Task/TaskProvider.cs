@@ -13,7 +13,7 @@ namespace JulyCore.Provider.Task
     /// 纯技术层：仅负责数据存储、索引维护、CRUD操作
     /// 不包含任何业务逻辑判断
     /// </summary>
-    internal class TaskProvider : ProviderBase, ITaskProvider
+    public class TaskProvider : ProviderBase, ITaskProvider
     {
         public override int Priority => Frameworkconst.PriorityTaskProvider;
         protected override LogChannel LogChannel => LogChannel.Task;
