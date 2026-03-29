@@ -32,6 +32,14 @@ namespace JulyCore
             }
 
             /// <summary>
+            /// 上报强类型事件
+            /// </summary>
+            public static void Track<T>(T evt) where T : struct, IBIEvent
+            {
+                Module.Track(evt.EventName, evt.ToParams());
+            }
+
+            /// <summary>
             /// 设置用户ID
             /// </summary>
             /// <param name="userId">用户ID</param>
@@ -47,6 +55,14 @@ namespace JulyCore
             public static void SetUserProperties(Dictionary<string, object> properties)
             {
                 Module.SetUserProperties(properties);
+            }
+
+            /// <summary>
+            /// 设置强类型用户属性
+            /// </summary>
+            public static void SetUserProperties<T>(T props) where T : struct, IBIProperties
+            {
+                Module.SetUserProperties(props.ToParams());
             }
 
             /// <summary>
