@@ -1,8 +1,5 @@
-using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using JulyCore.Core.Events;
-using JulyCore.Data.Network;
 using JulyCore.Module.Http;
 
 namespace JulyCore
@@ -21,50 +18,21 @@ namespace JulyCore
                 }
             }
 
-            public static void Configure(HttpConfig config)
+            public static void Configure(string baseUrl, int timeoutSeconds = 15)
             {
-                Module.ConfigureHttp(config);
+                Module.Configure(baseUrl, timeoutSeconds);
             }
 
-            public static UniTask<HttpResponse> GetAsync(string url,
-                Dictionary<string, string> headers = null,
-                CancellationToken cancellationToken = default)
+            public static UniTask Send<TResp>(HttpEntity<TResp> entity,
+                CancellationToken ct = default)
             {
-                return Module.GetAsync(url, headers, cancellationToken);
+                return Module.Send(entity, ct);
             }
 
-            public static UniTask<HttpResponse> PostAsync(string url, byte[] data,
-                Dictionary<string, string> headers = null,
-                CancellationToken cancellationToken = default)
+            public static UniTask<HttpResult<TResp>> SendRequest<TResp>(
+                string path, object body = null, CancellationToken ct = default)
             {
-                return Module.PostAsync(url, data, headers, cancellationToken);
-            }
-
-            public static UniTask<HttpResponse> PostJsonAsync(string url, string jsonData,
-                Dictionary<string, string> headers = null,
-                CancellationToken cancellationToken = default)
-            {
-                return Module.PostJsonAsync(url, jsonData, headers, cancellationToken);
-            }
-
-            public static UniTask<HttpResponse> PutAsync(string url, byte[] data,
-                Dictionary<string, string> headers = null,
-                CancellationToken cancellationToken = default)
-            {
-                return Module.PutAsync(url, data, headers, cancellationToken);
-            }
-
-            public static UniTask<HttpResponse> DeleteAsync(string url,
-                Dictionary<string, string> headers = null,
-                CancellationToken cancellationToken = default)
-            {
-                return Module.DeleteAsync(url, headers, cancellationToken);
-            }
-
-            public static void OnHttpCompleted(
-                System.Action<HttpRequestCompletedEvent> handler, object target)
-            {
-                _context.EventBus?.Subscribe(handler, target);
+                return Module.SendRequest<TResp>(path, body, ct);
             }
         }
     }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace JulyCore.Data.Network
@@ -261,39 +261,13 @@ namespace JulyCore.Data.Network
     [Serializable]
     public class HttpResponse
     {
-        /// <summary>
-        /// 响应状态码
-        /// </summary>
         public int StatusCode { get; set; }
-
-        /// <summary>
-        /// 响应数据
-        /// </summary>
         public byte[] Data { get; set; }
-
-        /// <summary>
-        /// 响应头
-        /// </summary>
-        public Dictionary<string, string> Headers { get; set; } = new Dictionary<string, string>();
-
-        /// <summary>
-        /// 错误信息
-        /// </summary>
         public string Error { get; set; }
-
-        /// <summary>
-        /// 请求耗时（毫秒）
-        /// </summary>
         public long ElapsedMs { get; set; }
 
-        /// <summary>
-        /// 是否成功
-        /// </summary>
         public bool IsSuccess => StatusCode >= 200 && StatusCode < 300 && string.IsNullOrEmpty(Error);
 
-        /// <summary>
-        /// 获取响应文本
-        /// </summary>
         public string GetText()
         {
             if (Data == null || Data.Length == 0)

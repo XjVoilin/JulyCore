@@ -1,4 +1,4 @@
-﻿using JulyCore.Data.Network;
+using JulyCore.Data.Network;
 
 namespace JulyCore.Core.Events
 {
@@ -198,37 +198,6 @@ namespace JulyCore.Core.Events
         /// 平均延迟（毫秒）
         /// </summary>
         public double AverageLatencyMs { get; set; }
-    }
-
-    /// <summary>
-    /// HTTP请求完成事件
-    /// </summary>
-    public class HttpRequestCompletedEvent : IEvent
-    {
-        /// <summary>
-        /// 请求URL
-        /// </summary>
-        public string Url { get; set; }
-
-        /// <summary>
-        /// 请求方法（GET/POST等）
-        /// </summary>
-        public string Method { get; set; }
-
-        /// <summary>
-        /// 响应数据
-        /// </summary>
-        public HttpResponse Response { get; set; }
-
-        /// <summary>
-        /// 是否成功
-        /// </summary>
-        public bool IsSuccess { get; set; }
-
-        /// <summary>
-        /// 重试次数
-        /// </summary>
-        public int RetryCount { get; set; }
     }
 
     /// <summary>

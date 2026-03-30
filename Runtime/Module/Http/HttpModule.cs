@@ -1,109 +1,140 @@
-using System.Collections.Generic;
+using System;
+using System.Text;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using JulyCore.Core;
-using JulyCore.Core.Events;
 using JulyCore.Data.Network;
 using JulyCore.Module.Base;
+using JulyCore.Provider.Data;
 using JulyCore.Provider.Http;
+using LitJson;
 
 namespace JulyCore.Module.Http
 {
     public class HttpModule : ModuleBase
     {
-        private IHttpProvider _httpProvider;
+        private IHttpProvider _provider;
+        private ISerializeProvider _serializer;
+
+        private string _baseUrl;
+        private int _timeoutSeconds = 15;
 
         protected override LogChannel LogChannel => LogChannel.Network;
-
         public override int Priority => Frameworkconst.PriorityHttpModule;
 
         protected override UniTask OnInitAsync()
         {
-            _httpProvider = GetProvider<IHttpProvider>();
-            if (_httpProvider == null)
+            _provider = GetProvider<IHttpProvider>();
+            if (_provider == null)
                 LogWarning($"[{Name}] IHttpProvider 未注册，HTTP 功能不可用");
+
+            _serializer = GetProvider<ISerializeProvider>();
+            if (_serializer == null)
+                LogWarning($"[{Name}] ISerializeProvider 未注册，序列化不可用");
+
             return UniTask.CompletedTask;
         }
 
         protected override UniTask OnShutdownAsync()
         {
-            _httpProvider = null;
+            _provider = null;
+            _serializer = null;
             return UniTask.CompletedTask;
         }
 
-        public void ConfigureHttp(HttpConfig config)
+        public void Configure(string baseUrl, int timeoutSeconds = 15)
         {
-            EnsureProvider();
-            _httpProvider.ConfigureHttp(config);
+            _baseUrl = baseUrl;
+            _timeoutSeconds = timeoutSeconds;
         }
 
-        public async UniTask<HttpResponse> GetAsync(string url,
-            Dictionary<string, string> headers = null,
-            CancellationToken cancellationToken = default)
+        /// <summary>
+        /// Entity 模式：发送请求并填充 entity 结果
+        /// </summary>
+        public async UniTask Send<TResp>(HttpEntity<TResp> entity, CancellationToken ct = default)
         {
-            EnsureProvider();
-            var response = await _httpProvider.GetAsync(url, headers, cancellationToken);
-            PublishHttpEvent("GET", url, response);
-            return response;
+            object body = entity is IHttpRequestBody rb ? rb.GetBody() : null;
+            var result = await SendRequest<TResp>(entity.Path, body, ct);
+
+            entity.Code = result.Code;
+            entity.Msg = result.Msg;
+            entity.RespData = result.Data;
+
+            if (entity.IsOk)
+                entity.OnResponse();
+            else
+                entity.OnError();
         }
 
-        public async UniTask<HttpResponse> PostAsync(string url, byte[] data,
-            Dictionary<string, string> headers = null,
-            CancellationToken cancellationToken = default)
+        /// <summary>
+        /// 底层管线：序列化 → 发送 → 信封解析 → 反序列化，返回结构化结果
+        /// </summary>
+        public async UniTask<HttpResult<TResp>> SendRequest<TResp>(
+            string path, object body = null, CancellationToken ct = default)
         {
-            EnsureProvider();
-            var response = await _httpProvider.PostAsync(url, data, headers, cancellationToken);
-            PublishHttpEvent("POST", url, response);
-            return response;
-        }
+            if (_provider == null)
+                throw new InvalidOperationException("IHttpProvider 未注册");
+            if (_serializer == null)
+                throw new InvalidOperationException("ISerializeProvider 未注册");
 
-        public async UniTask<HttpResponse> PostJsonAsync(string url, string jsonData,
-            Dictionary<string, string> headers = null,
-            CancellationToken cancellationToken = default)
-        {
-            EnsureProvider();
-            var response = await _httpProvider.PostJsonAsync(url, jsonData, headers,
-                cancellationToken);
-            PublishHttpEvent("POST", url, response);
-            return response;
-        }
+            var url = BuildUrl(path);
+            byte[] bodyBytes = null;
+            var method = "GET";
 
-        public async UniTask<HttpResponse> PutAsync(string url, byte[] data,
-            Dictionary<string, string> headers = null,
-            CancellationToken cancellationToken = default)
-        {
-            EnsureProvider();
-            var response = await _httpProvider.PutAsync(url, data, headers, cancellationToken);
-            PublishHttpEvent("PUT", url, response);
-            return response;
-        }
-
-        public async UniTask<HttpResponse> DeleteAsync(string url,
-            Dictionary<string, string> headers = null,
-            CancellationToken cancellationToken = default)
-        {
-            EnsureProvider();
-            var response = await _httpProvider.DeleteAsync(url, headers, cancellationToken);
-            PublishHttpEvent("DELETE", url, response);
-            return response;
-        }
-
-        private void EnsureProvider()
-        {
-            if (_httpProvider == null)
-                throw new System.InvalidOperationException(
-                    "IHttpProvider 未注册，请在 OnConfigureBase 中注册");
-        }
-
-        private void PublishHttpEvent(string method, string url, HttpResponse response)
-        {
-            EventBus?.Publish(new HttpRequestCompletedEvent
+            if (body != null)
             {
-                Method = method,
-                Url = url,
-                Response = response,
-                IsSuccess = response.IsSuccess
-            });
+                bodyBytes = Encoding.UTF8.GetBytes(_serializer.SerializeToJson(body));
+                method = "POST";
+            }
+
+            HttpResponse raw;
+            try
+            {
+                raw = await _provider.SendAsync(url, method, bodyBytes, null, _timeoutSeconds, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                return new HttpResult<TResp> { Code = -1, Msg = "请求已取消" };
+            }
+            catch (Exception ex)
+            {
+                return new HttpResult<TResp> { Code = -1, Msg = ex.Message };
+            }
+
+            if (!raw.IsSuccess)
+                return new HttpResult<TResp> { Code = -1, Msg = raw.Error ?? $"HTTP {raw.StatusCode}" };
+
+            try
+            {
+                var text = raw.GetText();
+                var jd = JsonMapper.ToObject(text);
+
+                var result = new HttpResult<TResp>
+                {
+                    Code = jd.ContainsKey("code") ? (int)jd["code"] : 0,
+                    Msg = jd.ContainsKey("msg") ? (string)jd["msg"] : null
+                };
+
+                if (result.IsOk && jd.ContainsKey("data") && jd["data"] != null)
+                {
+                    var dataJson = jd["data"].ToJson();
+                    var dataBytes = Encoding.UTF8.GetBytes(dataJson);
+                    result.Data = _serializer.Deserialize<TResp>(dataBytes);
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                return new HttpResult<TResp> { Code = -1, Msg = $"响应解析失败: {ex.Message}" };
+            }
+        }
+
+        private string BuildUrl(string path)
+        {
+            if (string.IsNullOrEmpty(_baseUrl) || path.StartsWith("http"))
+                return path;
+            return _baseUrl.TrimEnd('/') + "/" + path.TrimStart('/');
         }
     }
 }

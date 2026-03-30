@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace JulyCore.Data.Network
@@ -96,48 +96,6 @@ namespace JulyCore.Data.Network
     }
 
     /// <summary>
-    /// HTTP配置
-    /// </summary>
-    [Serializable]
-    public class HttpConfig
-    {
-        /// <summary>
-        /// 默认超时时间（秒）
-        /// </summary>
-        public float TimeoutSeconds { get; set; } = 30f;
-
-        /// <summary>
-        /// 默认请求头
-        /// </summary>
-        public Dictionary<string, string> DefaultHeaders { get; set; } = new Dictionary<string, string>();
-
-        /// <summary>
-        /// 是否启用重试
-        /// </summary>
-        public bool EnableRetry { get; set; } = true;
-
-        /// <summary>
-        /// 最大重试次数
-        /// </summary>
-        public int MaxRetryCount { get; set; } = 3;
-
-        /// <summary>
-        /// 重试间隔（秒）
-        /// </summary>
-        public float RetryIntervalSeconds { get; set; } = 1f;
-
-        /// <summary>
-        /// 需要重试的HTTP状态码
-        /// </summary>
-        public List<int> RetryStatusCodes { get; set; } = new List<int> { 408, 429, 500, 502, 503, 504 };
-
-        /// <summary>
-        /// 基础URL（用于拼接相对路径）
-        /// </summary>
-        public string BaseUrl { get; set; }
-    }
-
-    /// <summary>
     /// 网络总配置
     /// </summary>
     [Serializable]
@@ -152,11 +110,6 @@ namespace JulyCore.Data.Network
         /// 多连接WebSocket配置
         /// </summary>
         public List<WebSocketConfig> WebSocketConfigs { get; set; } = new List<WebSocketConfig>();
-
-        /// <summary>
-        /// HTTP配置
-        /// </summary>
-        public HttpConfig Http { get; set; } = new HttpConfig();
 
         /// <summary>
         /// 是否启用网络统计
@@ -225,43 +178,6 @@ namespace JulyCore.Data.Network
             _config.DefaultWebSocket.EnableHeartbeat = enable;
             _config.DefaultWebSocket.HeartbeatIntervalSeconds = intervalSeconds;
             _config.DefaultWebSocket.HeartbeatTimeoutSeconds = timeoutSeconds;
-            return this;
-        }
-
-        /// <summary>
-        /// 设置HTTP基础URL
-        /// </summary>
-        public NetworkConfigBuilder WithHttpBaseUrl(string baseUrl)
-        {
-            _config.Http.BaseUrl = baseUrl;
-            return this;
-        }
-
-        /// <summary>
-        /// 设置HTTP超时
-        /// </summary>
-        public NetworkConfigBuilder WithHttpTimeout(float timeoutSeconds)
-        {
-            _config.Http.TimeoutSeconds = timeoutSeconds;
-            return this;
-        }
-
-        /// <summary>
-        /// 设置HTTP重试
-        /// </summary>
-        public NetworkConfigBuilder WithHttpRetry(bool enable, int maxRetryCount = 3)
-        {
-            _config.Http.EnableRetry = enable;
-            _config.Http.MaxRetryCount = maxRetryCount;
-            return this;
-        }
-
-        /// <summary>
-        /// 添加默认HTTP请求头
-        /// </summary>
-        public NetworkConfigBuilder WithHttpHeader(string key, string value)
-        {
-            _config.Http.DefaultHeaders[key] = value;
             return this;
         }
 
