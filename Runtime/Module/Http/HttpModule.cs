@@ -51,14 +51,16 @@ namespace JulyCore.Module.Http
         /// <summary>
         /// Entity 模式：发送请求并填充 entity 结果
         /// </summary>
-        public async UniTask Send<TResp>(HttpEntity<TResp> entity, CancellationToken ct = default)
+        public async UniTask Send(HttpEntityBase entity, CancellationToken ct = default)
         {
             object body = entity is IHttpRequestBody rb ? rb.GetBody() : null;
-            var result = await SendRequest<TResp>(entity.Path, body, ct);
+            var raw = await SendRawAsync(entity.Path, body, ct);
 
-            entity.Code = result.Code;
-            entity.Msg = result.Msg;
-            entity.RespData = result.Data;
+            entity.Code = raw.Code;
+            entity.Msg = raw.Msg;
+
+            if (raw.IsOk && raw.DataBytes != null)
+                entity.SetResponseData(_serializer, raw.DataBytes);
 
             if (entity.IsOk)
                 entity.OnResponse();
@@ -71,6 +73,26 @@ namespace JulyCore.Module.Http
         /// </summary>
         public async UniTask<HttpResult<TResp>> SendRequest<TResp>(
             string path, object body = null, CancellationToken ct = default)
+        {
+            var raw = await SendRawAsync(path, body, ct);
+            var result = new HttpResult<TResp> { Code = raw.Code, Msg = raw.Msg };
+
+            if (result.IsOk && raw.DataBytes != null)
+                result.Data = _serializer.Deserialize<TResp>(raw.DataBytes);
+
+            return result;
+        }
+
+        private struct RawResult
+        {
+            public int Code;
+            public string Msg;
+            public byte[] DataBytes;
+            public bool IsOk => Code == 0;
+        }
+
+        private async UniTask<RawResult> SendRawAsync(
+            string path, object body, CancellationToken ct)
         {
             if (_provider == null)
                 throw new InvalidOperationException("IHttpProvider 未注册");
@@ -94,39 +116,35 @@ namespace JulyCore.Module.Http
             }
             catch (OperationCanceledException)
             {
-                return new HttpResult<TResp> { Code = -1, Msg = "请求已取消" };
+                return new RawResult { Code = -1, Msg = "请求已取消" };
             }
             catch (Exception ex)
             {
-                return new HttpResult<TResp> { Code = -1, Msg = ex.Message };
+                return new RawResult { Code = -1, Msg = ex.Message };
             }
 
             if (!raw.IsSuccess)
-                return new HttpResult<TResp> { Code = -1, Msg = raw.Error ?? $"HTTP {raw.StatusCode}" };
+                return new RawResult { Code = -1, Msg = raw.Error ?? $"HTTP {raw.StatusCode}" };
 
             try
             {
                 var text = raw.GetText();
                 var jd = JsonMapper.ToObject(text);
 
-                var result = new HttpResult<TResp>
+                var result = new RawResult
                 {
                     Code = jd.ContainsKey("code") ? (int)jd["code"] : 0,
                     Msg = jd.ContainsKey("msg") ? (string)jd["msg"] : null
                 };
 
                 if (result.IsOk && jd.ContainsKey("data") && jd["data"] != null)
-                {
-                    var dataJson = jd["data"].ToJson();
-                    var dataBytes = Encoding.UTF8.GetBytes(dataJson);
-                    result.Data = _serializer.Deserialize<TResp>(dataBytes);
-                }
+                    result.DataBytes = Encoding.UTF8.GetBytes(jd["data"].ToJson());
 
                 return result;
             }
             catch (Exception ex)
             {
-                return new HttpResult<TResp> { Code = -1, Msg = $"响应解析失败: {ex.Message}" };
+                return new RawResult { Code = -1, Msg = $"响应解析失败: {ex.Message}" };
             }
         }
 

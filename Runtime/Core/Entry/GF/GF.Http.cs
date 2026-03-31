@@ -23,7 +23,7 @@ namespace JulyCore
                 Module.Configure(baseUrl, timeoutSeconds);
             }
 
-            public static UniTask Send<TResp>(HttpEntity<TResp> entity,
+            public static UniTask Send(HttpEntityBase entity,
                 CancellationToken ct = default)
             {
                 return Module.Send(entity, ct);
