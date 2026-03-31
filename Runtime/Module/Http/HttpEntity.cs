@@ -6,6 +6,7 @@ namespace JulyCore.Module.Http
     {
         public int Code;
         public string Msg;
+        public int MsgId;
         public T Data;
         public bool IsOk => Code == 0;
     }
@@ -16,9 +17,10 @@ namespace JulyCore.Module.Http
 
         public int Code { get; internal set; }
         public string Msg { get; internal set; }
+        public int RespMsgId { get; internal set; }
         public bool IsOk => Code == 0;
 
-        internal abstract void SetResponseData(ISerializeProvider serializer, byte[] jsonBytes);
+        internal abstract void SetResponseData(ISerializeProvider serializer, string dataJson);
         protected internal virtual void OnResponse() { }
         protected internal virtual void OnError() { }
     }
@@ -27,16 +29,17 @@ namespace JulyCore.Module.Http
     {
         public TResp RespData { get; internal set; }
 
-        internal override void SetResponseData(ISerializeProvider serializer, byte[] jsonBytes)
+        internal override void SetResponseData(ISerializeProvider serializer, string dataJson)
         {
-            RespData = serializer.Deserialize<TResp>(jsonBytes);
+            RespData = (TResp)serializer.DeserializeFromJson(dataJson, typeof(TResp));
         }
     }
 
     public abstract class HttpEntity<TReq, TResp> : HttpEntity<TResp>, IHttpRequestBody
     {
         public abstract TReq RqtData { get; }
-        object IHttpRequestBody.GetBody() => RqtData;
+        protected virtual object BuildBody() => RqtData;
+        object IHttpRequestBody.GetBody() => BuildBody();
     }
 
     internal interface IHttpRequestBody

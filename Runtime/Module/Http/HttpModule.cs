@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using Cysharp.Threading.Tasks;
@@ -18,6 +19,7 @@ namespace JulyCore.Module.Http
 
         private string _baseUrl;
         private int _timeoutSeconds = 15;
+        private Dictionary<string, string> _defaultHeaders;
 
         protected override LogChannel LogChannel => LogChannel.Network;
         public override int Priority => Frameworkconst.PriorityHttpModule;
@@ -39,6 +41,7 @@ namespace JulyCore.Module.Http
         {
             _provider = null;
             _serializer = null;
+            _defaultHeaders = null;
             return UniTask.CompletedTask;
         }
 
@@ -48,9 +51,17 @@ namespace JulyCore.Module.Http
             _timeoutSeconds = timeoutSeconds;
         }
 
-        /// <summary>
-        /// Entity 模式：发送请求并填充 entity 结果
-        /// </summary>
+        public void SetDefaultHeader(string key, string value)
+        {
+            _defaultHeaders ??= new Dictionary<string, string>();
+            _defaultHeaders[key] = value;
+        }
+
+        public void RemoveDefaultHeader(string key)
+        {
+            _defaultHeaders?.Remove(key);
+        }
+
         public async UniTask Send(HttpEntityBase entity, CancellationToken ct = default)
         {
             object body = entity is IHttpRequestBody rb ? rb.GetBody() : null;
@@ -58,9 +69,10 @@ namespace JulyCore.Module.Http
 
             entity.Code = raw.Code;
             entity.Msg = raw.Msg;
+            entity.RespMsgId = raw.MsgId;
 
-            if (raw.IsOk && raw.DataBytes != null)
-                entity.SetResponseData(_serializer, raw.DataBytes);
+            if (raw.IsOk && raw.DataJson != null)
+                entity.SetResponseData(_serializer, raw.DataJson);
 
             if (entity.IsOk)
                 entity.OnResponse();
@@ -68,9 +80,6 @@ namespace JulyCore.Module.Http
                 entity.OnError();
         }
 
-        /// <summary>
-        /// 泛型 Entity 模式：内部创建实例，发送并返回 entity
-        /// </summary>
         public async UniTask<T> Send<T>(CancellationToken ct = default)
             where T : HttpEntityBase, new()
         {
@@ -79,31 +88,35 @@ namespace JulyCore.Module.Http
             return entity;
         }
 
-        /// <summary>
-        /// 底层管线：序列化 → 发送 → 信封解析 → 反序列化，返回结构化结果
-        /// </summary>
         public async UniTask<HttpResult<TResp>> SendRequest<TResp>(
             string path, object body = null, CancellationToken ct = default)
         {
             var raw = await SendRawAsync(path, body, ct);
-            var result = new HttpResult<TResp> { Code = raw.Code, Msg = raw.Msg };
+            var result = new HttpResult<TResp>
+            {
+                Code = raw.Code,
+                Msg = raw.Msg,
+                MsgId = raw.MsgId
+            };
 
-            if (result.IsOk && raw.DataBytes != null)
-                result.Data = _serializer.Deserialize<TResp>(raw.DataBytes);
+            if (result.IsOk && raw.DataJson != null)
+                result.Data = (TResp)_serializer.DeserializeFromJson(raw.DataJson, typeof(TResp));
 
             return result;
         }
+
+        #region Internal
 
         private struct RawResult
         {
             public int Code;
             public string Msg;
-            public byte[] DataBytes;
+            public int MsgId;
+            public string DataJson;
             public bool IsOk => Code == 0;
         }
 
-        private async UniTask<RawResult> SendRawAsync(
-            string path, object body, CancellationToken ct)
+        private async UniTask<RawResult> SendRawAsync(string path, object body, CancellationToken ct)
         {
             if (_provider == null)
                 throw new InvalidOperationException("IHttpProvider 未注册");
@@ -116,14 +129,15 @@ namespace JulyCore.Module.Http
 
             if (body != null)
             {
-                bodyBytes = Encoding.UTF8.GetBytes(_serializer.SerializeToJson(body));
+                var json = body is string s ? s : _serializer.SerializeToJson(body);
+                bodyBytes = Encoding.UTF8.GetBytes(json);
                 method = "POST";
             }
 
             HttpResponse raw;
             try
             {
-                raw = await _provider.SendAsync(url, method, bodyBytes, null, _timeoutSeconds, ct);
+                raw = await _provider.SendAsync(url, method, bodyBytes, _defaultHeaders, _timeoutSeconds, ct);
             }
             catch (OperationCanceledException)
             {
@@ -131,30 +145,52 @@ namespace JulyCore.Module.Http
             }
             catch (Exception ex)
             {
+                LogError($"[HTTP] 请求异常 {path}: {ex.Message}");
                 return new RawResult { Code = -1, Msg = ex.Message };
             }
 
             if (!raw.IsSuccess)
+            {
+                LogWarning($"[HTTP] 请求失败 {path}: {raw.StatusCode} {raw.Error}");
                 return new RawResult { Code = -1, Msg = raw.Error ?? $"HTTP {raw.StatusCode}" };
+            }
 
+            return ParseEnvelope(path, raw.GetText());
+        }
+
+        /// <summary>
+        /// 解析 Gate 响应信封。
+        /// 成功: { "code": 0, "msg_id": 101, "data": {...} }
+        /// 错误: { "code": 105, "msg": "login failed" }
+        /// </summary>
+        private RawResult ParseEnvelope(string path, string text)
+        {
             try
             {
-                var text = raw.GetText();
                 var jd = JsonMapper.ToObject(text);
+                var code = jd.ContainsKey("code") ? (int)jd["code"] : 0;
+
+                if (code != 0)
+                {
+                    var msg = jd.ContainsKey("msg") ? (string)jd["msg"] : null;
+                    LogWarning($"[HTTP] 业务错误 {path}: code={code} msg={msg}");
+                    return new RawResult { Code = code, Msg = msg };
+                }
 
                 var result = new RawResult
                 {
-                    Code = jd.ContainsKey("code") ? (int)jd["code"] : 0,
-                    Msg = jd.ContainsKey("msg") ? (string)jd["msg"] : null
+                    Code = 0,
+                    MsgId = jd.ContainsKey("msg_id") ? (int)jd["msg_id"] : 0
                 };
 
-                if (result.IsOk && jd.ContainsKey("data") && jd["data"] != null)
-                    result.DataBytes = Encoding.UTF8.GetBytes(jd["data"].ToJson());
+                if (jd.ContainsKey("data") && jd["data"] != null)
+                    result.DataJson = jd["data"].ToJson();
 
                 return result;
             }
             catch (Exception ex)
             {
+                LogError($"[HTTP] 响应解析失败 {path}: {ex.Message}");
                 return new RawResult { Code = -1, Msg = $"响应解析失败: {ex.Message}" };
             }
         }
@@ -165,5 +201,7 @@ namespace JulyCore.Module.Http
                 return path;
             return _baseUrl.TrimEnd('/') + "/" + path.TrimStart('/');
         }
+
+        #endregion
     }
 }

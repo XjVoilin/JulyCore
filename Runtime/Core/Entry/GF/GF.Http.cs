@@ -9,6 +9,7 @@ namespace JulyCore
         public static class Http
         {
             private static HttpModule _module;
+
             private static HttpModule Module
             {
                 get
@@ -23,22 +24,9 @@ namespace JulyCore
                 Module.Configure(baseUrl, timeoutSeconds);
             }
 
-            public static UniTask Send(HttpEntityBase entity,
-                CancellationToken ct = default)
+            public static UniTask Send(HttpEntityBase entity, CancellationToken ct = default)
             {
                 return Module.Send(entity, ct);
-            }
-
-            public static UniTask<T> Send<T>(CancellationToken ct = default)
-                where T : HttpEntityBase, new()
-            {
-                return Module.Send<T>(ct);
-            }
-
-            public static UniTask<HttpResult<TResp>> SendRequest<TResp>(
-                string path, object body = null, CancellationToken ct = default)
-            {
-                return Module.SendRequest<TResp>(path, body, ct);
             }
         }
     }
