@@ -29,6 +29,12 @@ namespace JulyCore
                 return Module.Send(entity, ct);
             }
 
+            public static UniTask<T> Send<T>(CancellationToken ct = default)
+                where T : HttpEntityBase, new()
+            {
+                return Module.Send<T>(ct);
+            }
+
             public static UniTask<HttpResult<TResp>> SendRequest<TResp>(
                 string path, object body = null, CancellationToken ct = default)
             {

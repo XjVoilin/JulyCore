@@ -69,6 +69,17 @@ namespace JulyCore.Module.Http
         }
 
         /// <summary>
+        /// 泛型 Entity 模式：内部创建实例，发送并返回 entity
+        /// </summary>
+        public async UniTask<T> Send<T>(CancellationToken ct = default)
+            where T : HttpEntityBase, new()
+        {
+            var entity = new T();
+            await Send(entity, ct);
+            return entity;
+        }
+
+        /// <summary>
         /// 底层管线：序列化 → 发送 → 信封解析 → 反序列化，返回结构化结果
         /// </summary>
         public async UniTask<HttpResult<TResp>> SendRequest<TResp>(
