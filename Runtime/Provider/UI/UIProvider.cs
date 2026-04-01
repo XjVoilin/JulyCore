@@ -29,6 +29,7 @@ namespace JulyCore.Provider.UI
         public Type UIType { get; set; }
 
         public UILayer Layer { get; set; }
+        public bool IgnoreSafeArea { get; set; }
         public object Param { get; set; }
 
         public CanvasGroup CanvasGroup { get; set; }
@@ -222,6 +223,12 @@ namespace JulyCore.Provider.UI
                 var instance = UnityEngine.Object.Instantiate(prefab, contentRoot);
                 instance.transform.SetParent(contentRoot, false);
                 instance.name = windowIdentifier.WindowName;
+
+                if (options.IgnoreSafeArea)
+                {
+                    ExpandToFullScreen(instance.GetComponent<RectTransform>());
+                }
+
                 component = instance.GetComponent(uiType) as UIBase;
 
                 if (component == null)
@@ -624,6 +631,7 @@ namespace JulyCore.Provider.UI
         private void SetupUIInfo(UIInfo uiInfo, UIOpenOptions options, Type uiType, WindowIdentifier windowIdentifier)
         {
             uiInfo.Layer = options.Layer;
+            uiInfo.IgnoreSafeArea = options.IgnoreSafeArea;
             uiInfo.Param = options.Data;
             uiInfo.CloseAnimationType = options.CloseAnimationType;
             uiInfo.UIType = uiType;
@@ -852,6 +860,30 @@ namespace JulyCore.Provider.UI
         #endregion
 
         #region 辅助方法
+
+        /// <summary>
+        /// 将窗口的 RectTransform 扩展到全屏，抵消 SafeArea 父节点的缩进。
+        /// 通过反算 SafeArea 的 anchor 值，使子节点恰好覆盖整个 Canvas。
+        /// </summary>
+        private void ExpandToFullScreen(RectTransform windowRect)
+        {
+            if (windowRect == null) return;
+
+            var safeAreaRect = windowRect.parent as RectTransform;
+            if (safeAreaRect == null) return;
+
+            var sMin = safeAreaRect.anchorMin;
+            var sMax = safeAreaRect.anchorMax;
+
+            float safeW = sMax.x - sMin.x;
+            float safeH = sMax.y - sMin.y;
+            if (safeW <= 0 || safeH <= 0) return;
+
+            windowRect.anchorMin = new Vector2(-sMin.x / safeW, -sMin.y / safeH);
+            windowRect.anchorMax = new Vector2((1f - sMin.x) / safeW, (1f - sMin.y) / safeH);
+            windowRect.offsetMin = Vector2.zero;
+            windowRect.offsetMax = Vector2.zero;
+        }
 
         /// <summary>
         /// 将 FrameworkConfig 中的设计分辨率配置应用到 CanvasScaler

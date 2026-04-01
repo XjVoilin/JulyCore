@@ -222,6 +222,12 @@ namespace JulyCore.Data.UI
         /// 点击遮罩是否关闭UI（默认false）
         /// </summary>
         public bool ClickMaskToClose { get; set; } = false;
+
+        /// <summary>
+        /// 是否忽略安全区域（全屏显示）
+        /// 为 true 时窗口直接挂载到 Layer Canvas 下，不受 SafeArea 约束
+        /// </summary>
+        public bool IgnoreSafeArea { get; set; } = false;
     }
 
     /// <summary>
