@@ -6,6 +6,7 @@ using JulyCore.Core.Events;
 using JulyCore.Data.RedDot;
 using JulyCore.Module.Base;
 using JulyCore.Provider.RedDot;
+using UnityEngine;
 
 namespace JulyCore.Module.RedDot
 {
@@ -311,6 +312,30 @@ namespace JulyCore.Module.RedDot
 
         #endregion
 
+        #region 事件绑定
+
+        /// <summary>
+        /// 绑定业务事件到红点节点：事件触发时自动调用已注册的 Calculator 重算
+        /// </summary>
+        internal void BindToEvent<TEvent>(string key) where TEvent : IEvent
+        {
+            EventBus.Subscribe<TEvent>(_ => Refresh(key), this);
+        }
+
+        /// <summary>
+        /// 绑定业务事件到多个红点节点
+        /// </summary>
+        internal void BindToEvent<TEvent>(params string[] keys) where TEvent : IEvent
+        {
+            EventBus.Subscribe<TEvent>(_ =>
+            {
+                foreach (var key in keys)
+                    Refresh(key);
+            }, this);
+        }
+
+        #endregion
+
         #region 红点查询
 
         internal RedDotNode GetNode(string key) => _provider.Get(key);
@@ -480,6 +505,23 @@ namespace JulyCore.Module.RedDot
 
         #endregion
 
+        #region Prefab 管理
+
+        private readonly Dictionary<RedDotType, GameObject> _prefabs = new();
+
+        internal void SetPrefab(RedDotType type, GameObject prefab)
+        {
+            if (prefab == null) return;
+            _prefabs[type] = prefab;
+        }
+
+        internal GameObject GetPrefab(RedDotType type)
+        {
+            return _prefabs.GetValueOrDefault(type);
+        }
+
+        #endregion
+
         private void PublishChanges(List<RedDotChangeInfo> changes)
         {
             if (changes == null || changes.Count == 0)
@@ -509,11 +551,9 @@ namespace JulyCore.Module.RedDot
         protected override UniTask OnShutdownAsync()
         {
             _provider = null;
-            lock (_lock)
-            {
-                _calculators.Clear();
-                _systemToNodes.Clear();
-            }
+            _calculators.Clear();
+            _systemToNodes.Clear();
+            _prefabs.Clear();
             return base.OnShutdownAsync();
         }
     }

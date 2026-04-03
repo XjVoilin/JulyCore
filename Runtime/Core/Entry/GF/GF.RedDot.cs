@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using JulyCore.Core;
 using JulyCore.Core.Events;
 using JulyCore.Data.RedDot;
 using JulyCore.Module.RedDot;
+using UnityEngine;
 
 namespace JulyCore
 {
@@ -221,6 +222,48 @@ namespace JulyCore
             public static void RefreshAll()
             {
                 Module.RefreshAll();
+            }
+
+            #endregion
+
+            #region 事件绑定
+
+            /// <summary>
+            /// 绑定业务事件到红点节点
+            /// 事件触发时自动调用已注册的 Calculator 重算红点值
+            /// </summary>
+            public static void BindToEvent<TEvent>(string key) where TEvent : IEvent
+            {
+                Module.BindToEvent<TEvent>(key);
+            }
+
+            /// <summary>
+            /// 绑定业务事件到多个红点节点
+            /// </summary>
+            public static void BindToEvent<TEvent>(params string[] keys) where TEvent : IEvent
+            {
+                Module.BindToEvent<TEvent>(keys);
+            }
+
+            #endregion
+
+            #region Prefab 配置
+
+            public static void SetPrefab(RedDotType type, GameObject prefab)
+            {
+                Module.SetPrefab(type, prefab);
+            }
+
+            public static void SetPrefabs(GameObject dotPrefab, GameObject numberPrefab = null, GameObject newPrefab = null)
+            {
+                Module.SetPrefab(RedDotType.Normal, dotPrefab);
+                if (numberPrefab != null) Module.SetPrefab(RedDotType.Number, numberPrefab);
+                if (newPrefab != null) Module.SetPrefab(RedDotType.New, newPrefab);
+            }
+
+            public static GameObject GetPrefab(RedDotType type)
+            {
+                return Module.GetPrefab(type);
             }
 
             #endregion
