@@ -25,9 +25,6 @@ namespace JulyCore.Module.Http
         }
 
         protected abstract void SetResponseData(string dataJson);
-
-        protected internal virtual void OnResponse() { }
-        protected internal virtual void OnError() { }
     }
 
     public abstract class HttpEntity<TResp> : HttpEntityBase

@@ -98,10 +98,6 @@ namespace JulyCore.Module.Http
                 entity.Msg = raw.Error;
             }
 
-            if (entity.IsOk)
-                entity.OnResponse();
-            else
-                entity.OnError();
         }
 
         #region Internal
