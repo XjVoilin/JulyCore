@@ -247,7 +247,9 @@ namespace JulyCore.Provider.UI
 
                 if (options.ShowMask)
                 {
-                    RequestMask(windowIdentifier, options.Layer, options.MaskColor, options.ClickMaskToClose);
+                    var color = options.MaskColor;
+                    color.a = _uiConfig.MaskAlpha;
+                    RequestMask(windowIdentifier, options.Layer, color, options.ClickMaskToClose);
                 }
 
                 if (options.Data != null)

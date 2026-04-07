@@ -216,7 +216,7 @@ namespace JulyCore.Data.UI
         /// <summary>
         /// 遮罩颜色（默认半透明黑色）
         /// </summary>
-        public Color MaskColor { get; set; } = new Color(0, 0, 0, 0.5f);
+        public Color MaskColor { get; set; } = new Color(0, 0, 0, 0.8f);
 
         /// <summary>
         /// 点击遮罩是否关闭UI（默认false）

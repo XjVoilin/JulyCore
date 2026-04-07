@@ -83,6 +83,9 @@ namespace JulyCore.Core.Config
 
         [Tooltip("Canvas 与 UI 相机的距离")]
         public float PlaneDistance = 100f;
+
+        [Tooltip("Mask的透明度")]
+        public float MaskAlpha = 0.8f;
     }
 
     /// <summary>
