@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using JulyCore.Module.Http;
@@ -27,6 +28,21 @@ namespace JulyCore
             public static UniTask Send(HttpEntityBase entity, CancellationToken ct = default)
             {
                 return Module.Send(entity, ct);
+            }
+
+            public static void SetDefaultHeader(string key, string value)
+            {
+                Module.SetDefaultHeader(key, value);
+            }
+
+            public static void RemoveDefaultHeader(string key)
+            {
+                Module.RemoveDefaultHeader(key);
+            }
+
+            public static void SetReLoginHandler(int errorCode, Func<CancellationToken, UniTask<bool>> handler)
+            {
+                Module.SetReLoginHandler(errorCode, handler);
             }
         }
     }
