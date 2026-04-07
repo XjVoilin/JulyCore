@@ -1,4 +1,4 @@
-﻿using System.Threading;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using JulyCore.Module.Audio;
 using JulyCore.Provider.Audio;
@@ -13,6 +13,8 @@ namespace JulyCore
         public static class Audio
         {
             private static AudioModule _module;
+            private static string _defaultClickSfx;
+            private static bool _defaultClickSfxResolved;
 
             private static AudioModule Module
             {
@@ -20,6 +22,19 @@ namespace JulyCore
                 {
                     _module ??= GetModule<AudioModule>();
                     return _module;
+                }
+            }
+
+            public static string DefaultClickSfx
+            {
+                get
+                {
+                    if (!_defaultClickSfxResolved)
+                    {
+                        _defaultClickSfxResolved = true;
+                        _defaultClickSfx = _context?.FrameworkConfig?.AudioConfig?.DefaultClickSfx;
+                    }
+                    return _defaultClickSfx;
                 }
             }
 

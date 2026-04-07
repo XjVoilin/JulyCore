@@ -63,6 +63,9 @@ namespace JulyCore.Core.Config
         
         [Header("Tip配置")]
         public TipConfig TipConfig = new();
+        
+        [Header("音频配置")]
+        public AudioConfig AudioConfig = new();
     }
     
     /// <summary>
@@ -86,6 +89,16 @@ namespace JulyCore.Core.Config
 
         [Tooltip("Mask的透明度")]
         public float MaskAlpha = 0.8f;
+    }
+
+    /// <summary>
+    /// 音频配置
+    /// </summary>
+    [Serializable]
+    public class AudioConfig
+    {
+        [Tooltip("默认按钮点击音效名（留空则不播放）")]
+        public string DefaultClickSfx = "";
     }
 
     /// <summary>

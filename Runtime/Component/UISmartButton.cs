@@ -1,4 +1,6 @@
+using Cysharp.Threading.Tasks;
 using DG.Tweening;
+using JulyCore;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
@@ -19,6 +21,10 @@ public class UISmartButton : MonoBehaviour,
 
     [Header("Click Cooldown")] public bool enableCooldown = true;
     public float cooldownTime = 0.5f;
+
+    [Header("Audio")]
+    [Tooltip("点击音效名（留空使用 FrameworkConfig 默认值）")]
+    [SerializeField] private string clickSfx;
 
     [Header("Event")] public UnityEvent onClick = new();
 
@@ -77,6 +83,7 @@ public class UISmartButton : MonoBehaviour,
         if (!TryProcessClick())
             return;
 
+        PlayClickSound();
         onClick?.Invoke();
     }
 
@@ -134,6 +141,13 @@ public class UISmartButton : MonoBehaviour,
 
         _lastClickTime = now;
         return true;
+    }
+
+    private void PlayClickSound()
+    {
+        var sfx = !string.IsNullOrEmpty(clickSfx) ? clickSfx : GF.Audio.DefaultClickSfx;
+        if (!string.IsNullOrEmpty(sfx))
+            GF.Audio.PlaySFXAsync(sfx).Forget();
     }
 
     #endregion
