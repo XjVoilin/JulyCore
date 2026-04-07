@@ -1,48 +1,37 @@
 using JulyCore;
 using JulyCore.Core.Events;
+using JulyCore.Data.RedDot;
 using TMPro;
 using UnityEngine;
 
 /// <summary>
-/// 红点锚点位置
+/// 红点组件（Prefab 自包含）。
+/// 使用方式：将红点 Prefab 拖到目标节点下 → Inspector 选 Key → 完成。
+/// Prefab 内含三种视觉子节点，引用在 Prefab 内部闭环，做一次拖好。
 /// </summary>
-public enum RedDotAnchor
+[DisallowMultipleComponent]
+public sealed class UIRedDot : MonoBehaviour
 {
-    TopRight,
-    TopLeft,
-    BottomRight,
-    BottomLeft,
-    Center
-}
+    private const string NumberOverflow = "99+";
 
-/// <summary>
-/// 红点视图组件
-/// 挂载到 UI 元素上，自动监听红点变化并显示
-/// </summary>
-public class UIRedDot : MonoBehaviour
-{
     [Header("红点配置")]
     [SerializeField] private string _key;
-    [SerializeField] private GameObject _prefab;
-    [SerializeField] private bool _showNumber = true;
 
-    [Header("位置设置")]
-    [SerializeField] private RedDotAnchor _anchor = RedDotAnchor.TopRight;
-    [SerializeField] private Vector2 _offset = Vector2.zero;
+    [Header("视觉根（Prefab 内拖好，使用时无需修改）")]
+    [SerializeField] private GameObject _visualNormal;
+    [SerializeField] private GameObject _visualNumber;
+    [SerializeField] private GameObject _visualNew;
 
-    private GameObject _instance;
-    private TMP_Text _tmpText;
-    private UnityEngine.UI.Text _uguiText;
+    [Header("文案")]
+    [SerializeField] private TMP_Text _numberText;
+
     private int _cachedCount = -1;
+    private GameObject _activeVisual;
 
-    /// <summary>
-    /// 当前是否显示红点
-    /// </summary>
-    public bool IsVisible => _instance != null && _instance.activeSelf;
+    /// <summary>当前是否显示红点。</summary>
+    public bool IsVisible => _activeVisual != null && _activeVisual.activeSelf;
 
-    /// <summary>
-    /// 监听的红点 Key
-    /// </summary>
+    /// <summary>监听的红点 Key。</summary>
     public string Key => _key;
 
     #region Unity 生命周期
@@ -50,175 +39,118 @@ public class UIRedDot : MonoBehaviour
     private void OnEnable()
     {
         if (string.IsNullOrEmpty(_key)) return;
-        
-        GF.RedDot.OnChanged(OnRedDotChanged, this);
-        GF.RedDot.OnEnabledChanged(OnEnabledChanged, this);
+
+        GF.RedDot.OnKeyChanged(_key, OnRedDotChanged, this);
         Refresh();
     }
 
     private void OnDisable()
     {
-        GF.RedDot.OffChanged(OnRedDotChanged);
-        GF.RedDot.OffEnabledChanged(OnEnabledChanged);
-    }
-
-    private void OnDestroy()
-    {
-        DestroyInstance();
+        GF.Event.UnsubscribeAll(this);
     }
 
     #endregion
 
     #region 公开方法
 
-    /// <summary>
-    /// 设置监听的 Key
-    /// </summary>
+    /// <summary>运行时切换监听 Key。传空或 null 会隐藏红点。</summary>
     public void SetKey(string key)
     {
         if (_key == key) return;
-        
+
         _key = key;
-        _cachedCount = -1;
-        
-        if (isActiveAndEnabled)
+
+        if (!isActiveAndEnabled) return;
+
+        if (string.IsNullOrEmpty(_key))
         {
-            Refresh();
+            HideAll();
+            return;
         }
+
+        Refresh();
     }
 
-    /// <summary>
-    /// 手动刷新显示
-    /// </summary>
+    /// <summary>手动刷新显示。</summary>
     public void Refresh()
     {
-        if (string.IsNullOrEmpty(_key)) return;
-        
+        if (string.IsNullOrEmpty(_key))
+        {
+            HideAll();
+            return;
+        }
+
+        var node = GF.RedDot.GetNode(_key);
+        var type = node?.Type ?? RedDotType.Normal;
         var count = GF.RedDot.GetCount(_key);
-        UpdateDisplay(count);
+        Present(type, count);
     }
 
     #endregion
 
     #region 私有方法
 
-    private void OnRedDotChanged(RedDotChangedEvent evt)
+    private void Present(RedDotType type, int count)
     {
-        if (evt.Key == _key)
+        if (count <= 0)
         {
-            Refresh();
+            HideAll();
+            return;
         }
-    }
 
-    private void OnEnabledChanged(RedDotEnabledChangedEvent evt)
-    {
-        if (evt.IsGlobal || IsAffectedByKey(evt.Key))
+        var visual = type switch
         {
-            Refresh();
+            RedDotType.Normal => _visualNormal,
+            RedDotType.Number => _visualNumber,
+            RedDotType.New => _visualNew,
+            _ => _visualNormal
+        };
+
+        if (visual == null)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.LogWarning($"[UIRedDot] Key「{_key}」类型 {type}，Prefab 中缺少对应视觉根。", this);
+#endif
+            HideAll();
+            return;
         }
-    }
 
-    private bool IsAffectedByKey(string changedKey)
-    {
-        if (changedKey == _key) return true;
-        
-        var node = GF.RedDot.GetNode(_key);
-        if (node == null) return false;
-        
-        var parentKey = node.ParentKey;
-        while (!string.IsNullOrEmpty(parentKey))
-        {
-            if (parentKey == changedKey) return true;
-            var parentNode = GF.RedDot.GetNode(parentKey);
-            if (parentNode == null) break;
-            parentKey = parentNode.ParentKey;
-        }
-        
-        return false;
-    }
+        SetAllVisualsActive(false);
+        visual.SetActive(true);
+        _activeVisual = visual;
 
-    private void UpdateDisplay(int count)
-    {
-        if (count > 0)
+        if (type == RedDotType.Number)
         {
-            ShowRedDot(count);
+            if (count != _cachedCount)
+            {
+                _cachedCount = count;
+                if (_numberText != null)
+                    _numberText.text = count > 99 ? NumberOverflow : count.ToString();
+            }
         }
         else
         {
-            HideRedDot();
+            _cachedCount = -1;
         }
     }
 
-    private void ShowRedDot(int count)
+    private void HideAll()
     {
-        if (_instance == null && _prefab != null)
-        {
-            _instance = Instantiate(_prefab, transform);
-            ApplyPosition();
-            CacheTextComponents();
-        }
-
-        if (_instance == null) return;
-
-        _instance.SetActive(true);
-
-        if (_showNumber && count != _cachedCount)
-        {
-            _cachedCount = count;
-            var text = count > 99 ? "99+" : count.ToString();
-            if (_tmpText != null) _tmpText.text = text;
-            else if (_uguiText != null) _uguiText.text = text;
-        }
-    }
-
-    private void ApplyPosition()
-    {
-        if (_instance == null) return;
-        
-        var rectTransform = _instance.GetComponent<RectTransform>();
-        if (rectTransform == null) return;
-
-        var anchorPos = _anchor switch
-        {
-            RedDotAnchor.TopRight => new Vector2(1, 1),
-            RedDotAnchor.TopLeft => new Vector2(0, 1),
-            RedDotAnchor.BottomRight => new Vector2(1, 0),
-            RedDotAnchor.BottomLeft => new Vector2(0, 0),
-            _ => new Vector2(0.5f, 0.5f)
-        };
-
-        rectTransform.anchorMin = anchorPos;
-        rectTransform.anchorMax = anchorPos;
-        rectTransform.pivot = new Vector2(0.5f, 0.5f);
-        rectTransform.anchoredPosition = _offset;
-    }
-
-    private void HideRedDot()
-    {
-        if (_instance != null)
-        {
-            _instance.SetActive(false);
-        }
+        SetAllVisualsActive(false);
+        _activeVisual = null;
         _cachedCount = -1;
     }
 
-    private void DestroyInstance()
+    private void SetAllVisualsActive(bool active)
     {
-        if (_instance != null)
-        {
-            Destroy(_instance);
-            _instance = null;
-        }
-        _tmpText = null;
-        _uguiText = null;
-        _cachedCount = -1;
+        if (_visualNormal != null) _visualNormal.SetActive(active);
+        if (_visualNumber != null) _visualNumber.SetActive(active);
+        if (_visualNew != null) _visualNew.SetActive(active);
     }
 
-    private void CacheTextComponents()
+    private void OnRedDotChanged(RedDotChangedEvent evt)
     {
-        if (_instance == null) return;
-        _tmpText = _instance.GetComponentInChildren<TMP_Text>();
-        _uguiText = _instance.GetComponentInChildren<UnityEngine.UI.Text>();
+        Refresh();
     }
 
     #endregion

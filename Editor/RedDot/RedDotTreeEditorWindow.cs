@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -656,14 +656,6 @@ namespace JulyGF.Editor.RedDot
                 MarkDirtyAndRefresh();
             });
 
-            // 系统名
-            var systemField = AddDetailRow("系统名", node.systemName, false);
-            systemField.RegisterValueChangedCallback(evt =>
-            {
-                node.systemName = evt.newValue;
-                MarkDirtyAndRefresh();
-            });
-
             // 描述
             var descLabel = new Label("描述");
             _detailPanel.Add(descLabel);
@@ -1024,43 +1016,17 @@ namespace JulyGF.Editor.RedDot
             sb.AppendLine("        /// </summary>");
             sb.AppendLine("        public static void RegisterAll()");
             sb.AppendLine("        {");
-            sb.AppendLine("            GF.RedDot.LoadFromBuilder(builder =>");
-            sb.AppendLine("            {");
 
             var roots = _config.GetRootNodes();
             foreach (var root in roots)
             {
-                GenerateNodeRegistration(sb, root, "                ", nodeToConstMap);
+                GenerateNodeRegistration(sb, root, "            ", nodeToConstMap);
             }
 
-            sb.AppendLine("            });");
             sb.AppendLine("        }");
             sb.AppendLine();
             sb.AppendLine("        #endregion");
             sb.AppendLine("    }");
-
-            var systems = _config.nodes
-                .Where(n => !string.IsNullOrEmpty(n.systemName))
-                .Select(n => n.systemName)
-                .Distinct()
-                .OrderBy(s => s)
-                .ToList();
-
-            if (systems.Count > 0)
-            {
-                sb.AppendLine();
-                sb.AppendLine("    /// <summary>");
-                sb.AppendLine("    /// 红点业务系统名定义（自动生成）");
-                sb.AppendLine("    /// </summary>");
-                sb.AppendLine("    public static class RedDotSystems");
-                sb.AppendLine("    {");
-                foreach (var system in systems)
-                {
-                    sb.AppendLine($"        public const string {SanitizeKey(system)} = \"{system}\";");
-                }
-
-                sb.AppendLine("    }");
-            }
 
             sb.AppendLine("}");
 
@@ -1095,17 +1061,14 @@ namespace JulyGF.Editor.RedDot
             }
             
             var typeStr = $"RedDotType.{node.type}";
-            var systemStr = string.IsNullOrEmpty(node.systemName) ? "null" : $"\"{node.systemName}\"";
-            var descStr = string.IsNullOrEmpty(node.description) ? "null" : $"\"{EscapeString(node.description)}\"";
 
             if (string.IsNullOrEmpty(node.parentKey))
             {
-                sb.AppendLine($"{indent}builder.AddRoot({keyConst}, {typeStr}, {systemStr}, {descStr});");
+                sb.AppendLine($"{indent}GF.RedDot.Register({keyConst}, null, {typeStr});");
             }
             else
             {
-                sb.AppendLine(
-                    $"{indent}builder.AddChildTo({parentConst}, {keyConst}, {typeStr}, {systemStr}, {descStr});");
+                sb.AppendLine($"{indent}GF.RedDot.Register({keyConst}, {parentConst}, {typeStr});");
             }
 
             var children = _config.GetChildren(node.key);
@@ -1114,8 +1077,6 @@ namespace JulyGF.Editor.RedDot
                 GenerateNodeRegistration(sb, child, indent, nodeToConstMap);
             }
         }
-
-        private string SanitizeKey(string key) => key?.Replace(".", "_").Replace("-", "_").Replace(" ", "_") ?? "";
 
         /// <summary>
         /// 将路径字符串转换为合法的 C# 标识符

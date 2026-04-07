@@ -4,7 +4,6 @@ using JulyCore.Core;
 using JulyCore.Core.Events;
 using JulyCore.Data.RedDot;
 using JulyCore.Module.RedDot;
-using UnityEngine;
 
 namespace JulyCore
 {
@@ -57,38 +56,6 @@ namespace JulyCore
                 Module.LoadFromConfigTable(configTable);
             }
 
-            public static void LoadFromBuilder(Action<RedDotConfigBuilder> builderAction)
-            {
-                if (builderAction == null) return;
-                var builder = new RedDotConfigBuilder();
-                builderAction(builder);
-                LoadFromConfigTable(builder.Build());
-            }
-
-            #endregion
-
-            #region 系统关联
-
-            public static void BindToSystem(string systemName, params string[] nodeKeys)
-            {
-                Module.BindToSystem(systemName, nodeKeys);
-            }
-
-            public static void UnbindSystem(string systemName)
-            {
-                Module.UnbindSystem(systemName);
-            }
-
-            public static void RefreshSystem(string systemName)
-            {
-                Module.RefreshSystem(systemName);
-            }
-
-            public static int GetSystemCount(string systemName)
-            {
-                return Module.GetSystemCount(systemName);
-            }
-
             #endregion
 
             #region 红点查询
@@ -101,21 +68,6 @@ namespace JulyCore
             public static int GetCount(string key)
             {
                 return Module.GetCount(key);
-            }
-
-            public static bool IsVisible(string key)
-            {
-                return Module.IsVisible(key);
-            }
-
-            public static List<RedDotNode> GetAllNodes()
-            {
-                return Module.GetAllNodes() ?? new List<RedDotNode>();
-            }
-
-            public static List<RedDotNode> GetChildNodes(string key)
-            {
-                return Module.GetChildNodes(key) ?? new List<RedDotNode>();
             }
 
             /// <summary>
@@ -178,23 +130,6 @@ namespace JulyCore
                 Module.ClearAll();
             }
 
-            /// <summary>
-            /// 标记为已读（清零红点）
-            /// </summary>
-            public static void MarkAsRead(string key)
-            {
-                Module.MarkAsRead(key);
-            }
-
-            /// <summary>
-            /// 标记为未读（设置红点为1）
-            /// 注意：如果设置了计算器，下次 Refresh 会覆盖此值
-            /// </summary>
-            public static void MarkAsUnread(string key)
-            {
-                Module.MarkAsUnread(key);
-            }
-
             #endregion
 
             #region 计算器
@@ -226,48 +161,6 @@ namespace JulyCore
 
             #endregion
 
-            #region 事件绑定
-
-            /// <summary>
-            /// 绑定业务事件到红点节点
-            /// 事件触发时自动调用已注册的 Calculator 重算红点值
-            /// </summary>
-            public static void BindToEvent<TEvent>(string key) where TEvent : IEvent
-            {
-                Module.BindToEvent<TEvent>(key);
-            }
-
-            /// <summary>
-            /// 绑定业务事件到多个红点节点
-            /// </summary>
-            public static void BindToEvent<TEvent>(params string[] keys) where TEvent : IEvent
-            {
-                Module.BindToEvent<TEvent>(keys);
-            }
-
-            #endregion
-
-            #region Prefab 配置
-
-            public static void SetPrefab(RedDotType type, GameObject prefab)
-            {
-                Module.SetPrefab(type, prefab);
-            }
-
-            public static void SetPrefabs(GameObject dotPrefab, GameObject numberPrefab = null, GameObject newPrefab = null)
-            {
-                Module.SetPrefab(RedDotType.Normal, dotPrefab);
-                if (numberPrefab != null) Module.SetPrefab(RedDotType.Number, numberPrefab);
-                if (newPrefab != null) Module.SetPrefab(RedDotType.New, newPrefab);
-            }
-
-            public static GameObject GetPrefab(RedDotType type)
-            {
-                return Module.GetPrefab(type);
-            }
-
-            #endregion
-
             #region 数据持久化
 
             public static Dictionary<string, int> ExportState()
@@ -275,6 +168,9 @@ namespace JulyCore
                 return Module.ExportState() ?? new Dictionary<string, int>();
             }
 
+            /// <summary>
+            /// 导入叶子计数；不派发变更事件。若需 UI 同步请在导入后对相关叶子调用 Refresh，或与计算器数据对齐后再 Refresh。
+            /// </summary>
             public static void ImportState(Dictionary<string, int> stateData)
             {
                 Module.ImportState(stateData);
@@ -283,16 +179,6 @@ namespace JulyCore
             #endregion
 
             #region 事件订阅
-
-            public static void OnChanged(Action<RedDotChangedEvent> handler, object target)
-            {
-                _context.EventBus.Subscribe(handler, target);
-            }
-
-            public static void OnBatchChanged(Action<RedDotBatchChangedEvent> handler, object target)
-            {
-                _context.EventBus.Subscribe(handler, target);
-            }
 
             public static void OnKeyChanged(string key, Action<RedDotChangedEvent> handler, object target)
             {
@@ -303,24 +189,9 @@ namespace JulyCore
                 }, target);
             }
 
-            public static void OffChanged(Action<RedDotChangedEvent> handler)
-            {
-                _context.EventBus.Unsubscribe(handler);
-            }
-
-            public static void OffBatchChanged(Action<RedDotBatchChangedEvent> handler)
-            {
-                _context.EventBus.Unsubscribe(handler);
-            }
-
             public static void OnEnabledChanged(Action<RedDotEnabledChangedEvent> handler, object target)
             {
                 _context.EventBus.Subscribe(handler, target);
-            }
-
-            public static void OffEnabledChanged(Action<RedDotEnabledChangedEvent> handler)
-            {
-                _context.EventBus.Unsubscribe(handler);
             }
 
             #endregion

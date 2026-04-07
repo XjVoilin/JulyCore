@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -363,9 +363,7 @@ namespace JulyCore.Data.RedDot
                 {
                     Key = node.key,
                     ParentKey = node.parentKey,
-                    Type = node.type,
-                    SystemName = node.systemName,
-                    Description = node.description
+                    Type = node.type
                 });
             }
             return table;
@@ -389,9 +387,6 @@ namespace JulyCore.Data.RedDot
 
         [Tooltip("所属模块（用于代码分组）")]
         public string module;
-
-        [Tooltip("关联的业务系统名")]
-        public string systemName;
 
         [Tooltip("描述/注释")]
         public string description;

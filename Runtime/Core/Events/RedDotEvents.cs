@@ -1,4 +1,3 @@
-﻿using System.Collections.Generic;
 using JulyCore.Data.RedDot;
 
 namespace JulyCore.Core.Events
@@ -14,14 +13,6 @@ namespace JulyCore.Core.Events
         public RedDotType Type { get; set; }
         public bool JustAppeared => OldCount == 0 && NewCount > 0;
         public bool JustDisappeared => OldCount > 0 && NewCount == 0;
-    }
-
-    /// <summary>
-    /// 红点批量变更事件
-    /// </summary>
-    public class RedDotBatchChangedEvent : IEvent
-    {
-        public List<RedDotChangeInfo> Changes { get; set; } = new List<RedDotChangeInfo>();
     }
 
     /// <summary>

@@ -6,14 +6,11 @@ using JulyCore.Core.Events;
 using JulyCore.Data.RedDot;
 using JulyCore.Module.Base;
 using JulyCore.Provider.RedDot;
-using UnityEngine;
 
 namespace JulyCore.Module.RedDot
 {
     /// <summary>
-    /// 红点模块
-    /// 业务逻辑层：负责计算器管理、系统关联、刷新策略
-    /// 调用 Provider 进行数据存储
+    /// 红点模块：计算器与刷新；数据由 Provider 存储
     /// </summary>
     internal class RedDotModule : ModuleBase
     {
@@ -21,11 +18,7 @@ namespace JulyCore.Module.RedDot
 
         protected override LogChannel LogChannel => LogChannel.RedDot;
 
-        // 业务逻辑：计算器管理
         private readonly Dictionary<string, RedDotValueCalculator> _calculators = new();
-
-        // 业务逻辑：系统关联
-        private readonly Dictionary<string, List<string>> _systemToNodes = new();
 
         private readonly object _lock = new();
 
@@ -54,14 +47,7 @@ namespace JulyCore.Module.RedDot
         {
             lock (_lock)
             {
-                // 移除计算器
                 _calculators.Remove(key);
-
-                // 移除系统关联
-                foreach (var kvp in _systemToNodes)
-                {
-                    kvp.Value.Remove(key);
-                }
             }
 
             return _provider.Remove(key);
@@ -72,113 +58,8 @@ namespace JulyCore.Module.RedDot
             lock (_lock)
             {
                 _calculators.Clear();
-                _systemToNodes.Clear();
             }
             _provider.Clear();
-        }
-
-        #endregion
-
-        #region 业务逻辑 - 系统关联
-
-        /// <summary>
-        /// 绑定红点节点到业务系统
-        /// </summary>
-        internal void BindToSystem(string systemName, params string[] nodeKeys)
-        {
-            if (string.IsNullOrEmpty(systemName) || nodeKeys == null)
-                return;
-
-            lock (_lock)
-            {
-                if (!_systemToNodes.TryGetValue(systemName, out var list))
-                {
-                    list = new List<string>();
-                    _systemToNodes[systemName] = list;
-                }
-
-                foreach (var key in nodeKeys)
-                {
-                    if (!list.Contains(key))
-                        list.Add(key);
-                }
-            }
-        }
-
-        /// <summary>
-        /// 解绑业务系统
-        /// </summary>
-        internal void UnbindSystem(string systemName)
-        {
-            if (string.IsNullOrEmpty(systemName)) return;
-
-            lock (_lock)
-            {
-                _systemToNodes.Remove(systemName);
-            }
-        }
-
-        /// <summary>
-        /// 刷新业务系统的所有红点（优化：使用批量操作）
-        /// </summary>
-        internal void RefreshSystem(string systemName)
-        {
-            if (string.IsNullOrEmpty(systemName)) return;
-
-            List<string> nodeKeys;
-            lock (_lock)
-            {
-                if (!_systemToNodes.TryGetValue(systemName, out nodeKeys))
-                    return;
-                nodeKeys = new List<string>(nodeKeys);
-            }
-
-            // 批量计算所有节点的新值
-            var counts = new Dictionary<string, int>();
-            foreach (var key in nodeKeys)
-            {
-                RedDotValueCalculator calculator;
-                lock (_lock)
-                {
-                    if (!_calculators.TryGetValue(key, out calculator))
-                        continue;
-                }
-
-                try
-                {
-                    counts[key] = calculator(key);
-                }
-                catch (Exception ex)
-                {
-                    LogError($"[{Name}] 红点计算器执行失败: {key}, 错误: {ex.Message}");
-                }
-            }
-
-            // 使用批量设置
-            var changes = _provider.SetCountBatch(counts);
-            PublishChanges(changes);
-        }
-
-        /// <summary>
-        /// 获取业务系统的红点总数
-        /// </summary>
-        internal int GetSystemCount(string systemName)
-        {
-            if (string.IsNullOrEmpty(systemName)) return 0;
-
-            List<string> nodeKeys;
-            lock (_lock)
-            {
-                if (!_systemToNodes.TryGetValue(systemName, out nodeKeys))
-                    return 0;
-            }
-
-            int total = 0;
-            foreach (var key in nodeKeys)
-            {
-                total += _provider.GetCount(key);
-            }
-            return total;
         }
 
         #endregion
@@ -312,37 +193,10 @@ namespace JulyCore.Module.RedDot
 
         #endregion
 
-        #region 事件绑定
-
-        /// <summary>
-        /// 绑定业务事件到红点节点：事件触发时自动调用已注册的 Calculator 重算
-        /// </summary>
-        internal void BindToEvent<TEvent>(string key) where TEvent : IEvent
-        {
-            EventBus.Subscribe<TEvent>(_ => Refresh(key), this);
-        }
-
-        /// <summary>
-        /// 绑定业务事件到多个红点节点
-        /// </summary>
-        internal void BindToEvent<TEvent>(params string[] keys) where TEvent : IEvent
-        {
-            EventBus.Subscribe<TEvent>(_ =>
-            {
-                foreach (var key in keys)
-                    Refresh(key);
-            }, this);
-        }
-
-        #endregion
-
         #region 红点查询
 
         internal RedDotNode GetNode(string key) => _provider.Get(key);
         internal int GetCount(string key) => _provider.GetCount(key);
-        internal bool IsVisible(string key) => _provider.GetCount(key) > 0;
-        internal List<RedDotNode> GetAllNodes() => _provider.GetAll();
-        internal List<RedDotNode> GetChildNodes(string key) => _provider.GetChildren(key);
 
         /// <summary>
         /// 设置节点启用状态
@@ -449,24 +303,6 @@ namespace JulyCore.Module.RedDot
             PublishChanges(changes);
         }
 
-        internal void MarkAsRead(string key) => Clear(key);
-
-        internal void MarkAsUnread(string key)
-        {
-            var node = _provider.Get(key);
-            if (node == null) return;
-
-            // 只允许对叶子节点调用
-            if (!node.IsLeaf)
-            {
-                LogWarning($"[{Name}] MarkAsUnread 应只对叶子节点调用，'{key}' 是非叶子节点，操作已忽略");
-                return;
-            }
-
-            var changes = _provider.SetCount(key, 1);
-            PublishChanges(changes);
-        }
-
         #endregion
 
         #region 数据持久化
@@ -482,42 +318,12 @@ namespace JulyCore.Module.RedDot
         {
             if (config == null) return;
             _provider.Store(config.Key, config.ParentKey, config.Type);
-
-            if (!string.IsNullOrEmpty(config.SystemName))
-            {
-                BindToSystem(config.SystemName, config.Key);
-            }
         }
 
         internal void LoadFromConfigTable(RedDotConfigTable configTable)
         {
             if (configTable?.Nodes == null) return;
-
-            var registrations = configTable.ToRegistrations();
-            _provider.StoreBatch(registrations);
-
-            var systemBindings = configTable.GetSystemBindings();
-            foreach (var kvp in systemBindings)
-            {
-                BindToSystem(kvp.Key, kvp.Value.ToArray());
-            }
-        }
-
-        #endregion
-
-        #region Prefab 管理
-
-        private readonly Dictionary<RedDotType, GameObject> _prefabs = new();
-
-        internal void SetPrefab(RedDotType type, GameObject prefab)
-        {
-            if (prefab == null) return;
-            _prefabs[type] = prefab;
-        }
-
-        internal GameObject GetPrefab(RedDotType type)
-        {
-            return _prefabs.GetValueOrDefault(type);
+            _provider.StoreBatch(configTable.ToRegistrations());
         }
 
         #endregion
@@ -539,8 +345,6 @@ namespace JulyCore.Module.RedDot
                         Type = change.Type
                     });
                 }
-
-                EventBus.Publish(new RedDotBatchChangedEvent { Changes = changes });
             }
             catch (Exception ex)
             {
@@ -551,9 +355,10 @@ namespace JulyCore.Module.RedDot
         protected override UniTask OnShutdownAsync()
         {
             _provider = null;
-            _calculators.Clear();
-            _systemToNodes.Clear();
-            _prefabs.Clear();
+            lock (_lock)
+            {
+                _calculators.Clear();
+            }
             return base.OnShutdownAsync();
         }
     }
