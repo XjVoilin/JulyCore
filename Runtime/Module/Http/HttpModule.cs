@@ -76,7 +76,10 @@ namespace JulyCore.Module.Http
 
         private async UniTask SendInternal(HttpEntityBase entity, CancellationToken ct)
         {
+            var logName = entity.LogTag != null ? $"{entity.Path} [{entity.LogTag}]" : entity.Path;
             var bodyJson = entity.BuildBody();
+            Log($"[HTTP] >>> {logName}\n{bodyJson ?? "(empty)"}");
+
             var raw = await SendRawAsync(entity.Path, bodyJson, ct);
 
             if (raw.IsSuccess)
@@ -84,20 +87,21 @@ namespace JulyCore.Module.Http
                 try
                 {
                     entity.ParseResponse(raw.Text);
+                    Log($"[HTTP] <<< {logName} code={entity.Code}\n{raw.Text}");
                 }
                 catch (Exception ex)
                 {
-                    LogError($"[HTTP] 响应解析失败 {entity.Path}: {ex.Message}");
+                    LogError($"[HTTP] <<< {logName} 响应解析失败: {ex.Message}");
                     entity.Code = -1;
                     entity.Msg = $"响应解析失败: {ex.Message}";
                 }
             }
             else
             {
+                LogWarning($"[HTTP] <<< {logName} 失败: {raw.Error}");
                 entity.Code = -1;
                 entity.Msg = raw.Error;
             }
-
         }
 
         #region Internal

@@ -5,6 +5,7 @@ namespace JulyCore.Module.Http
     public abstract class HttpEntityBase
     {
         public abstract string Path { get; }
+        public virtual string LogTag => null;
 
         public int Code { get; protected internal set; }
         public string Msg { get; protected internal set; }
