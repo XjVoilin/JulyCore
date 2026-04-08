@@ -61,6 +61,14 @@ namespace JulyCore
             }
 
             /// <summary>
+            /// 通过窗口 ID 从配置提供者获取窗口配置。未注册提供者或未找到配置时返回 null。
+            /// </summary>
+            public static UIOpenOptions GetWindowConfig(int windowId)
+            {
+                return _windowConfigProvider?.GetUIOpenOptions(windowId);
+            }
+
+            /// <summary>
             /// 通过窗口 ID 打开 UI（从配置提供者查找完整参数）。
             /// </summary>
             public static void Open(int windowId, object data = null,
