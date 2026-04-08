@@ -95,9 +95,8 @@ namespace JulyCore.Provider.UI
         private readonly Dictionary<int, WindowIdentifier> _idToIdentifier = new Dictionary<int, WindowIdentifier>();
         private readonly Dictionary<Type, GameObject> _preloadedPrefabs = new Dictionary<Type, GameObject>();
 
-        // 遮罩管理（全局单遮罩）
-        private readonly List<MaskRequest> _maskRequests = new List<MaskRequest>();
-        private GameObject _activeMask;
+        // 遮罩管理（每窗口独立遮罩）
+        private readonly Dictionary<WindowIdentifier, GameObject> _masks = new Dictionary<WindowIdentifier, GameObject>();
 
         // Tip 管理
         private TipManager _tipManager;
@@ -503,12 +502,11 @@ namespace JulyCore.Provider.UI
             _preloadedPrefabs.Clear();
 
             // 清理遮罩
-            _maskRequests.Clear();
-            if (_activeMask != null)
+            foreach (var mask in _masks.Values)
             {
-                UnityEngine.Object.Destroy(_activeMask);
-                _activeMask = null;
+                if (mask != null) UnityEngine.Object.Destroy(mask);
             }
+            _masks.Clear();
 
             _uiInfos.Clear();
             _idToIdentifier.Clear();
@@ -765,67 +763,24 @@ namespace JulyCore.Provider.UI
 
         #region 遮罩管理
 
-        private struct MaskRequest
-        {
-            public WindowIdentifier Identifier;
-            public UILayer Layer;
-            public Color Color;
-            public bool ClickToClose;
-        }
-
         private void RequestMask(WindowIdentifier identifier, UILayer layer, Color color, bool clickToClose)
         {
-            _maskRequests.Add(new MaskRequest
-            {
-                Identifier = identifier,
-                Layer = layer,
-                Color = color,
-                ClickToClose = clickToClose
-            });
-            RefreshMask();
+            if (!TryGetUIInfo(identifier, out var uiInfo) || uiInfo.UI == null) return;
+
+            var contentRoot = GetOrCreateContentRoot(layer);
+            var maskObj = CreateMaskGameObject(contentRoot, color, clickToClose, identifier);
+            var panelIndex = uiInfo.UI.transform.GetSiblingIndex();
+            maskObj.transform.SetSiblingIndex(panelIndex);
+
+            _masks[identifier] = maskObj;
         }
 
         private void ReleaseMask(WindowIdentifier identifier)
         {
-            var removed = false;
-            for (var i = _maskRequests.Count - 1; i >= 0; i--)
+            if (_masks.Remove(identifier, out var maskObj) && maskObj != null)
             {
-                if (_maskRequests[i].Identifier == identifier)
-                {
-                    _maskRequests.RemoveAt(i);
-                    removed = true;
-                    break;
-                }
+                UnityEngine.Object.Destroy(maskObj);
             }
-
-            if (removed)
-            {
-                RefreshMask();
-            }
-        }
-
-        /// <summary>
-        /// 根据遮罩请求栈重建遮罩
-        /// 始终只保留一个遮罩，定位在最顶部请求遮罩的面板背后
-        /// </summary>
-        private void RefreshMask()
-        {
-            if (_activeMask != null)
-            {
-                UnityEngine.Object.Destroy(_activeMask);
-                _activeMask = null;
-            }
-
-            if (_maskRequests.Count == 0) return;
-
-            var top = _maskRequests[^1];
-
-            if (!TryGetUIInfo(top.Identifier, out var uiInfo) || uiInfo.UI == null) return;
-
-            var contentRoot = GetOrCreateContentRoot(top.Layer);
-            _activeMask = CreateMaskGameObject(contentRoot, top.Color, top.ClickToClose, top.Identifier);
-            var panelIndex = uiInfo.UI.transform.GetSiblingIndex();
-            _activeMask.transform.SetSiblingIndex(panelIndex);
         }
 
         private GameObject CreateMaskGameObject(Transform parent, Color maskColor, bool clickToClose,
