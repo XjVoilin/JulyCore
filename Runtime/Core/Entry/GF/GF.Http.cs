@@ -44,6 +44,11 @@ namespace JulyCore
             {
                 Module.SetReLoginHandler(errorCode, handler);
             }
+
+            public static void SetErrorHandler(Action<int, string> handler)
+            {
+                Module.SetErrorHandler(handler);
+            }
         }
     }
 }

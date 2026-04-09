@@ -20,11 +20,17 @@ namespace JulyCore.Module.Http
 
         private int _reLoginCode;
         private Func<CancellationToken, UniTask<bool>> _reLoginHandler;
+        private Action<int, string> _errorHandler;
 
         public void SetReLoginHandler(int errorCode, Func<CancellationToken, UniTask<bool>> handler)
         {
             _reLoginCode = errorCode;
             _reLoginHandler = handler;
+        }
+
+        public void SetErrorHandler(Action<int, string> handler)
+        {
+            _errorHandler = handler;
         }
 
         protected override LogChannel LogChannel => LogChannel.Network;
@@ -72,6 +78,9 @@ namespace JulyCore.Module.Http
                 if (await _reLoginHandler(ct))
                     await SendInternal(entity, ct);
             }
+
+            if (!entity.IsOk)
+                _errorHandler?.Invoke(entity.Code, entity.Msg);
         }
 
         private async UniTask SendInternal(HttpEntityBase entity, CancellationToken ct)
