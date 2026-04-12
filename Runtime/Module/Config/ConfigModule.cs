@@ -18,10 +18,10 @@ namespace JulyCore.Module.Config
         protected override LogChannel LogChannel => LogChannel.Config;
         public override int Priority => Frameworkconst.PriorityConfigModule;
 
-        protected override async UniTask OnInitAsync()
+        protected override UniTask OnInitAsync()
         {
             _provider = GetProvider<IConfigProvider>();
-            await base.OnInitAsync();
+            return UniTask.CompletedTask;
         }
 
         /// <summary>

@@ -73,13 +73,12 @@ namespace JulyCore.Module.Activity
             }
         }
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             _definitions.Clear();
             _stateCache.Clear();
             _newlyOpenedIds.Clear();
             _isReady = false;
-            return base.OnShutdownAsync();
         }
 
         #region 活动注册

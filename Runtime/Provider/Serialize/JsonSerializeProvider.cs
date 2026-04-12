@@ -1,6 +1,5 @@
 using System;
 using System.Text;
-using System.Threading;
 using Cysharp.Threading.Tasks;
 using JulyCore.Core;
 using JulyCore.Provider.Base;
@@ -63,22 +62,6 @@ namespace JulyCore.Provider.Data
                 GF.LogException(ex);
                 throw;
             }
-        }
-
-        /// <summary>
-        /// 异步序列化数据为字节数组
-        /// </summary>
-        public UniTask<byte[]> SerializeAsync<T>(T data, CancellationToken cancellationToken = default)
-        {
-            return UniTask.FromResult(Serialize(data));
-        }
-
-        /// <summary>
-        /// 异步反序列化字节数组为数据对象
-        /// </summary>
-        public UniTask<T> DeserializeAsync<T>(byte[] bytes, CancellationToken cancellationToken = default)
-        {
-            return UniTask.FromResult(Deserialize<T>(bytes));
         }
 
         #endregion

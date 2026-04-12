@@ -81,7 +81,7 @@ namespace JulyCore.Module.Fsm
         /// <summary>
         /// 关闭Module
         /// </summary>
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             // 销毁所有状态机
             if (_fsmProvider != null)
@@ -97,7 +97,6 @@ namespace JulyCore.Module.Fsm
             }
 
             _fsmProvider = null;
-            return base.OnShutdownAsync();
         }
     }
 }

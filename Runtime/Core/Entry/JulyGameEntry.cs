@@ -66,15 +66,9 @@ namespace JulyCore.Core
 
         protected virtual void OnDestroy()
         {
-            ShutdownFramework().Forget();
-        }
-
-        private async UniTask ShutdownFramework()
-        {
             try
             {
-                if (FrameworkContext.Instance != null)
-                    await FrameworkContext.Instance.ShutdownAsync();
+                FrameworkContext.Instance?.Shutdown();
                 JLogger.Log("[Launch] Framework shutdown");
             }
             catch (Exception ex)

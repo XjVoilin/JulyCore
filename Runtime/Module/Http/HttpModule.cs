@@ -45,11 +45,10 @@ namespace JulyCore.Module.Http
             return UniTask.CompletedTask;
         }
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             _provider = null;
             _defaultHeaders = null;
-            return UniTask.CompletedTask;
         }
 
         public void Configure(string baseUrl, int timeoutSeconds = 15)

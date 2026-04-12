@@ -50,18 +50,28 @@ namespace JulyCore.Provider.Base
         /// </summary>
         protected CancellationToken CancellationToken => FrameworkContext.Instance.CancellationToken;
 
-        /// <summary>
-        /// 初始化 Provider
-        /// </summary>
-        public async UniTask InitAsync()
+        public UniTask InitAsync()
         {
             if (_isInitialized)
             {
                 JLogger.LogWarning($"[{Name}] Provider 已初始化，跳过");
-                return;
+                return UniTask.CompletedTask;
             }
 
-            await OnInitAsync();
+            var task = OnInitAsync();
+
+            if (task.Status == UniTaskStatus.Succeeded)
+            {
+                _isInitialized = true;
+                return UniTask.CompletedTask;
+            }
+
+            return AwaitInitAsync(task);
+        }
+
+        private async UniTask AwaitInitAsync(UniTask initTask)
+        {
+            await initTask;
             _isInitialized = true;
         }
 

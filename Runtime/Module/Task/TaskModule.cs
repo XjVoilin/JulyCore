@@ -62,7 +62,7 @@ namespace JulyCore.Module.Task
 
         public override int Priority => Frameworkconst.PriorityTaskModule;
 
-        protected override async UniTask OnInitAsync()
+        protected override UniTask OnInitAsync()
         {
             _provider = GetProvider<ITaskProvider>();
             _timeCapability = GetCapability<ITimeCapability>();
@@ -72,7 +72,7 @@ namespace JulyCore.Module.Task
             _resetScheduler?.RegisterScheduledResets(_timeCapability, type => ResetTasksByType(type));
             RegisterExpireCheck();
 
-            await base.OnInitAsync();
+            return UniTask.CompletedTask;
         }
 
         /// <summary>
@@ -753,7 +753,7 @@ namespace JulyCore.Module.Task
 
         #endregion
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             _resetScheduler?.UnregisterScheduledResets(_timeCapability);
 
@@ -780,7 +780,6 @@ namespace JulyCore.Module.Task
             _rewardHandler = null;
             _unlockCheckHandler = null;
             _resetScheduler = null;
-            return base.OnShutdownAsync();
         }
     }
 }

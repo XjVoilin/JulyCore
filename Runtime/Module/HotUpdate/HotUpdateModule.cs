@@ -351,14 +351,12 @@ namespace JulyCore.Module.HotUpdate
 
         #endregion
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             _hotUpdateProvider = null;
             _config = null;
             _lastResult = null;
             _state = HotUpdateState.NotLoaded;
-
-            return base.OnShutdownAsync();
         }
     }
 }

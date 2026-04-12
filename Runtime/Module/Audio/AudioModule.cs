@@ -131,13 +131,13 @@ namespace JulyCore.Module.Audio
         /// <summary>
         /// 初始化Module
         /// </summary>
-        protected override async UniTask OnInitAsync()
+        protected override UniTask OnInitAsync()
         {
             try
             {
                 _audioProvider = GetProvider<IAudioProvider>();
                 Log($"[{Name}] 音效模块初始化完成");
-                await base.OnInitAsync();
+                return UniTask.CompletedTask;
             }
             catch (Exception ex)
             {
@@ -630,7 +630,7 @@ namespace JulyCore.Module.Audio
         /// <summary>
         /// 关闭Module
         /// </summary>
-        protected override async UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             // 停止所有音频
             StopBGM(0f);
@@ -642,7 +642,6 @@ namespace JulyCore.Module.Audio
             _invalidHandleList.Clear();
 
             Log($"[{Name}] 音效模块已关闭");
-            await base.OnShutdownAsync();
         }
     }
 }

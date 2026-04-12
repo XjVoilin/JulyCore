@@ -337,10 +337,9 @@ namespace JulyCore.Module.UI
 
         #endregion
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             CloseAll();
-            return base.OnShutdownAsync();
         }
     }
 }

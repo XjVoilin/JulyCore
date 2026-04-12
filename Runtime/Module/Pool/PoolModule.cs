@@ -109,7 +109,7 @@ namespace JulyCore.Module.Pool
         /// <summary>
         /// 关闭Module
         /// </summary>
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             // 销毁所有对象池
             if (_poolProvider != null)
@@ -125,7 +125,6 @@ namespace JulyCore.Module.Pool
             }
 
             _poolProvider = null;
-            return base.OnShutdownAsync();
         }
     }
 }

@@ -63,9 +63,9 @@ namespace JulyCore.Core
         UniTask InitAllAsync();
 
         /// <summary>
-        /// 关闭所有 Module（内部自动处理 Disable）
+        /// 关闭所有 Module
         /// </summary>
-        UniTask ShutdownAsync();
+        void Shutdown();
 
         /// <summary>
         /// 更新所有 Module（只更新已启用的Module）

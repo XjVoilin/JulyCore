@@ -62,10 +62,10 @@ namespace JulyCore.Module.Guide
             await LoadProgressInternal();
         }
 
-        protected override async UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             // 关闭时保存进度
-            await SaveProgressInternal();
+            SaveProgressInternal().Forget();
 
             // 清理所有 Handler
             foreach (var handler in _flowHandlers.Values)

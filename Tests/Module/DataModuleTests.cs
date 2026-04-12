@@ -32,8 +32,7 @@ namespace JulyGF.Tests.Module
         [TearDown]
         public void TearDown()
         {
-            _module?.ShutdownAsync().GetAwaiter().GetResult();
-            _module?.Dispose();
+            _module?.Shutdown();
             _context.ProviderService.Clear();
             _context.Registry.Clear();
             _module = null;
@@ -112,47 +111,6 @@ namespace JulyGF.Tests.Module
             Assert.Throws<InvalidOperationException>(() => { module.Deserialize<TestData>(bytes); });
         }
 
-        [UnityTest]
-        public IEnumerator SerializeAsync_ValidData_ShouldReturnBytes()
-        {
-            yield return _module.InitAsync().ToCoroutine();
-            var testData = new TestData { Value = 42 };
-
-            byte[] bytes = null;
-            yield return _module.SerializeAsync(testData).ToCoroutine(x => bytes = x);
-
-            Assert.IsNotNull(bytes);
-            Assert.Greater(bytes.Length, 0);
-        }
-
-        [UnityTest]
-        public IEnumerator DeserializeAsync_ValidBytes_ShouldReturnData()
-        {
-            yield return _module.InitAsync().ToCoroutine();
-            var testData = new TestData { Value = 42, Name = "Test" };
-            byte[] bytes = null;
-            yield return _module.SerializeAsync(testData).ToCoroutine(x => bytes = x);
-
-            Assert.IsNotNull(bytes);
-            TestData result = null;
-            yield return _module.DeserializeAsync<TestData>(bytes).ToCoroutine(x => result = x);
-
-            Assert.IsNotNull(result);
-            Assert.AreEqual(42, result.Value);
-            Assert.AreEqual("Test", result.Name);
-        }
-
-        [UnityTest]
-        public IEnumerator DeserializeAsync_EmptyBytes_ShouldReturnDefault()
-        {
-            yield return _module.InitAsync().ToCoroutine();
-
-            TestData result = null;
-            yield return _module.DeserializeAsync<TestData>(Array.Empty<byte>()).ToCoroutine(x => result = x);
-
-            Assert.IsNull(result);
-        }
-
         [Serializable]
         private class TestData
         {
@@ -177,18 +135,6 @@ namespace JulyGF.Tests.Module
 
                 var json = System.Text.Encoding.UTF8.GetString(bytes);
                 return JsonUtility.FromJson<T>(json);
-            }
-
-            public UniTask<byte[]> SerializeAsync<T>(T data,
-                System.Threading.CancellationToken cancellationToken = default)
-            {
-                return UniTask.FromResult(Serialize(data));
-            }
-
-            public UniTask<T> DeserializeAsync<T>(byte[] bytes,
-                System.Threading.CancellationToken cancellationToken = default)
-            {
-                return UniTask.FromResult(Deserialize<T>(bytes));
             }
 
             public string SerializeToJson(object data)

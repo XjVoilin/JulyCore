@@ -137,10 +137,9 @@ namespace JulyCore.Module.Resource
                 throw new InvalidOperationException($"[{Name}] ResourceProvider未初始化，请确保 Module 已完成初始化后再调用 GF.Resource");
         }
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             _resourceProvider = null;
-            return base.OnShutdownAsync();
         }
     }
 }

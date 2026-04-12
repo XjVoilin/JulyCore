@@ -352,14 +352,13 @@ namespace JulyCore.Module.RedDot
             }
         }
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             _provider = null;
             lock (_lock)
             {
                 _calculators.Clear();
             }
-            return base.OnShutdownAsync();
         }
     }
 }

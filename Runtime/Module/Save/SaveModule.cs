@@ -181,16 +181,14 @@ namespace JulyCore.Module.Save
             base.OnUpdate(elapseSeconds, realElapseSeconds);
         }
 
-        protected override async UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             var dirtyCount = _saveProvider.DirtyCount;
 
             if (dirtyCount > 0)
             {
-                await TriggerSaveAsync(SaveSignal.Immediate);
+                TriggerSaveAsync(SaveSignal.Immediate).Forget();
             }
-
-            await base.OnShutdownAsync();
         }
 
         #endregion

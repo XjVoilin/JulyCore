@@ -322,11 +322,10 @@ namespace JulyCore.Module.Localization
 
         #endregion
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             _supportedLanguages.Clear();
             _localizationProvider = null;
-            return base.OnShutdownAsync();
         }
     }
 }

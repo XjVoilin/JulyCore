@@ -159,27 +159,16 @@ namespace JulyGF.Tests.Core
         }
 
         [UnityTest]
-        public IEnumerator InitAllAsync_ShouldAutoEnable()
+        public IEnumerator Shutdown_InitializedModules_ShouldShutdownAll()
         {
             var module = new TestModule();
             _moduleService.RegisterModule(module);
             yield return _moduleService.InitAllAsync().ToCoroutine();
 
-            Assert.IsTrue(module.IsEnabled);
-        }
-
-        [UnityTest]
-        public IEnumerator ShutdownAsync_InitializedModules_ShouldShutdownAll()
-        {
-            var module = new TestModule();
-            _moduleService.RegisterModule(module);
-            yield return _moduleService.InitAllAsync().ToCoroutine();
-
-            yield return _moduleService.ShutdownAsync().ToCoroutine();
+            _moduleService.Shutdown();
 
             Assert.IsFalse(_moduleService.IsInitialized);
             Assert.IsFalse(module.IsInitialized);
-            Assert.IsFalse(module.IsEnabled);
         }
 
         [UnityTest]

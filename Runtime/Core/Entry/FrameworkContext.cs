@@ -104,20 +104,15 @@ namespace JulyCore.Core
         }
 
         /// <summary>
-        /// 关闭框架
+        /// 关闭框架（全同步）
         /// </summary>
-        public async UniTask ShutdownAsync()
+        public void Shutdown()
         {
-            if (!_isInitialized)
-            {
-                return;
-            }
+            if (!_isInitialized) return;
 
             JLogger.Log($"{Frameworkconst.TagFrameworkContext} 开始关闭框架");
 
-            await _moduleService.ShutdownAsync();
-
-            // 关闭所有Provider
+            _moduleService.Shutdown();
             _providerService.ShutdownAll();
 
             _isInitialized = false;

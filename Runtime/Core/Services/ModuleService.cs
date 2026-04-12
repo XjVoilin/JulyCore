@@ -29,8 +29,6 @@ namespace JulyCore.Core
                 throw new ArgumentNullException(nameof(module));
 
             var moduleType = module.GetType();
-            // 设计意图：Module 是唯一实例，重复注册意味着代码 bug，因此抛异常。
-            // 与 ServiceRegistry 允许覆盖不同 — Provider 可替换，Module 不可。
             if (_moduleDic.ContainsKey(moduleType))
                 throw new JulyException($"模块 {moduleType.Name} 已经注册");
 
@@ -99,14 +97,15 @@ namespace JulyCore.Core
                 {
                     try
                     {
-                        await module.InitAsync();
-                        module.Enable();
+                        var task = module.InitAsync();
+                        if (task.Status != UniTaskStatus.Succeeded)
+                            await task;
                         initialized.Add(module);
                         newCount++;
                     }
                     catch (Exception ex)
                     {
-                        await RollbackAsync(initialized);
+                        Rollback(initialized);
 
                         throw new JulyException(
                             FrameworkErrorCode.ModuleInitFailed,
@@ -122,23 +121,16 @@ namespace JulyCore.Core
                 JLogger.Log($"{Frameworkconst.TagModuleService} {newCount} 个 Module 初始化完成");
         }
 
-        public async UniTask ShutdownAsync()
+        public void Shutdown()
         {
             if (!IsInitialized) return;
 
             for (int i = _modules.Count - 1; i >= 0; i--)
             {
-                if (_modules[i].IsInitialized)
-                {
-                    try
-                    {
-                        await _modules[i].ShutdownAsync();
-                    }
-                    catch (Exception ex)
-                    {
-                        JLogger.LogException(ex);
-                    }
-                }
+                if (!_modules[i].IsInitialized) continue;
+
+                try { _modules[i].Shutdown(); }
+                catch (Exception ex) { JLogger.LogException(ex); }
             }
 
             IsInitialized = false;
@@ -151,7 +143,7 @@ namespace JulyCore.Core
 
             foreach (var module in _modules)
             {
-                if (!module.IsInitialized || !module.IsEnabled) continue;
+                if (!module.IsInitialized) continue;
 
                 try
                 {
@@ -166,15 +158,6 @@ namespace JulyCore.Core
 
         public void Clear()
         {
-            foreach (var module in _modules)
-            {
-                try { module.Dispose(); }
-                catch (Exception ex)
-                {
-                    JLogger.LogException(ex);
-                }
-            }
-
             _modules.Clear();
             _moduleDic.Clear();
             IsInitialized = false;
@@ -184,7 +167,7 @@ namespace JulyCore.Core
 
         #region 私有方法
 
-        private async UniTask RollbackAsync(List<IModule> modules)
+        private void Rollback(List<IModule> modules)
         {
             if (modules.Count == 0) return;
 
@@ -192,14 +175,8 @@ namespace JulyCore.Core
 
             for (int i = modules.Count - 1; i >= 0; i--)
             {
-                try
-                {
-                    await modules[i].ShutdownAsync();
-                }
-                catch (Exception ex)
-                {
-                    JLogger.LogException(ex);
-                }
+                try { modules[i].Shutdown(); }
+                catch (Exception ex) { JLogger.LogException(ex); }
             }
 
             JLogger.LogWarning($"{Frameworkconst.TagModuleService} 模块回滚完成");

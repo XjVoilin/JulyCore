@@ -392,7 +392,7 @@ namespace JulyCore.Module.Time
 
         #endregion
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             // 取消所有定时器
             CancelAllTimers();
@@ -402,8 +402,6 @@ namespace JulyCore.Module.Time
             _serverTimeOffset = 0;
             _nextTimerId = 1;
             _activeTimerIds.Clear();
-
-            return base.OnShutdownAsync();
         }
 
         private void EnsureProvider()

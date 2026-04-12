@@ -124,7 +124,7 @@ namespace JulyCore.Module.Network
             CheckTimeoutRequests();
         }
 
-        protected override async UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             // 停止所有心跳
             StopAllHeartbeats();
@@ -137,8 +137,6 @@ namespace JulyCore.Module.Network
                 _networkProvider.OnTextMessage -= OnWebSocketTextMessage;
                 _networkProvider.OnBinaryMessage -= OnWebSocketBinaryMessage;
                 _networkProvider.OnError -= OnWebSocketError;
-
-                await _networkProvider.DisconnectAllAsync();
             }
 
             // 清理

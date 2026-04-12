@@ -80,12 +80,10 @@ namespace JulyCore.Module.Analytics
                 throw new InvalidOperationException($"[{Name}] AnalyticsProvider未初始化");
         }
 
-        protected override async UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             if (_isEnabled && _analyticsProvider != null)
                 _analyticsProvider.Flush();
-
-            await base.OnShutdownAsync();
         }
     }
 }

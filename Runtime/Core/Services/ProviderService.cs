@@ -47,7 +47,9 @@ namespace JulyCore.Core
             {
                 if (!provider.IsInitialized)
                 {
-                    await provider.InitAsync();
+                    var task = provider.InitAsync();
+                    if (task.Status != UniTaskStatus.Succeeded)
+                        await task;
                     newCount++;
                 }
             }

@@ -669,7 +669,7 @@ namespace JulyCore.Module.ABTest
             }
         }
 
-        protected override UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             _provider = null;
             lock (_lock)
@@ -679,7 +679,6 @@ namespace JulyCore.Module.ABTest
             }
             _customAllocator = null;
             Log($"[{Name}] AB测试模块已关闭");
-            return base.OnShutdownAsync();
         }
     }
 }

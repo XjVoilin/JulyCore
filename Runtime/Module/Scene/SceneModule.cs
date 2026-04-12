@@ -292,7 +292,7 @@ namespace JulyCore.Module.Scene
         /// <summary>
         /// 关闭Module
         /// </summary>
-        protected override async UniTask OnShutdownAsync()
+        protected override void OnShutdown()
         {
             // 清空场景栈
             _sceneStack.Clear();
@@ -300,8 +300,6 @@ namespace JulyCore.Module.Scene
             _resourceProvider = null;
             _eventBus = null;
             _currentSceneName = null;
-
-            await base.OnShutdownAsync();
         }
 
         private void EnsureProvider()
