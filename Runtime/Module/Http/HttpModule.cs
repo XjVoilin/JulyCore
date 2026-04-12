@@ -67,13 +67,9 @@ namespace JulyCore.Module.Http
             _kickCode = options.KickCode;
             _kickHandler = options.KickHandler;
             _blockingHandler = options.BlockingHandler;
-        }
-
-        public void SetRetryParams(int baseDelayMs, float backoffMultiplier, int maxDelayMs)
-        {
-            _retryBaseDelayMs = baseDelayMs;
-            _retryBackoffMultiplier = backoffMultiplier;
-            _retryMaxDelayMs = maxDelayMs;
+            _retryBaseDelayMs = options.RetryBaseDelayMs;
+            _retryBackoffMultiplier = options.RetryBackoffMultiplier;
+            _retryMaxDelayMs = options.RetryMaxDelayMs;
         }
 
         public void SetDefaultHeader(string key, string value)
@@ -91,20 +87,22 @@ namespace JulyCore.Module.Http
 
         #region Send — Direct Path
 
+        /// <summary>
+        /// OperationCanceledException 会原样抛给调用方，不触发 errorHandler。
+        /// </summary>
         public async UniTask Send(HttpEntity entity, CancellationToken ct = default)
         {
             await SendInternal(entity, ct);
 
-            if (!entity.IsOk && _kickCode != 0 && entity.Code == _kickCode)
-            {
-                _kickHandler?.Invoke();
-                return;
-            }
+            if (CheckKick(entity)) return;
 
             if (!entity.IsOk && _reLoginCode != 0 && entity.Code == _reLoginCode && _reLoginHandler != null)
             {
                 if (await _reLoginHandler(ct))
+                {
                     await SendInternal(entity, ct);
+                    if (CheckKick(entity)) return;
+                }
             }
 
             if (!entity.IsOk)
@@ -125,64 +123,58 @@ namespace JulyCore.Module.Http
         private async UniTask ProcessQueueAsync()
         {
             _isProcessing = true;
-
-            while (_queue.Count > 0)
+            try
             {
-                var entity = _queue.Dequeue();
-
-                if (entity.IsBlocking)
-                    _blockingHandler?.Invoke(entity, true);
-
-                try
+                while (_queue.Count > 0)
                 {
-                    await SendWithRetry(entity);
+                    var entity = _queue.Dequeue();
 
-                    if (_kickCode != 0 && entity.Code == _kickCode)
-                    {
-                        _kickHandler?.Invoke();
-                        ClearQueue();
-                        _isProcessing = false;
-                        return;
-                    }
+                    if (entity.IsBlocking)
+                        _blockingHandler?.Invoke(entity, true);
 
-                    if (_reLoginCode != 0 && entity.Code == _reLoginCode && _reLoginHandler != null)
+                    try
                     {
-                        var success = await _reLoginHandler(GFCancellationToken);
-                        if (success)
+                        await SendWithRetry(entity);
+
+                        if (CheckKick(entity)) return;
+
+                        if (_reLoginCode != 0 && entity.Code == _reLoginCode && _reLoginHandler != null)
                         {
+                            var success = await _reLoginHandler(GFCancellationToken);
+                            if (!success) return;
+
                             entity.RegenerateRequestId();
                             await SendWithRetry(entity);
+
+                            if (CheckKick(entity)) return;
+                        }
+
+                        if (entity.IsOk)
+                        {
+                            try { entity.OnResponse(); }
+                            catch (Exception ex) { LogError($"[HTTP] OnResponse 异常: {ex.Message}"); }
                         }
                         else
                         {
-                            ClearQueue();
-                            _isProcessing = false;
-                            return;
+                            try { entity.OnError(); }
+                            catch (Exception ex) { LogError($"[HTTP] OnError 异常: {ex.Message}"); }
+                            _errorHandler?.Invoke(entity.Code, entity.Msg);
                         }
                     }
-
-                    if (entity.IsOk)
+                    finally
                     {
-                        try { entity.OnResponse(); }
-                        catch (Exception ex) { LogError($"[HTTP] OnResponse 异常: {ex.Message}"); }
-                    }
-                    else
-                    {
-                        try { entity.OnError(); }
-                        catch (Exception ex) { LogError($"[HTTP] OnError 异常: {ex.Message}"); }
-                        _errorHandler?.Invoke(entity.Code, entity.Msg);
-                    }
-                }
-                finally
-                {
-                    if (entity.IsBlocking)
-                        _blockingHandler?.Invoke(entity, false);
+                        if (entity.IsBlocking)
+                            _blockingHandler?.Invoke(entity, false);
 
-                    entity.SetCompleted();
+                        entity.SetCompleted();
+                    }
                 }
             }
-
-            _isProcessing = false;
+            finally
+            {
+                ClearQueue();
+                _isProcessing = false;
+            }
         }
 
         private async UniTask SendWithRetry(HttpQueueEntity entity)
@@ -211,6 +203,13 @@ namespace JulyCore.Module.Http
         #endregion
 
         #region Internal
+
+        private bool CheckKick(HttpEntityBase entity)
+        {
+            if (_kickCode == 0 || entity.IsOk || entity.Code != _kickCode) return false;
+            _kickHandler?.Invoke();
+            return true;
+        }
 
         private async UniTask SendInternal(HttpEntityBase entity, CancellationToken ct)
         {
@@ -272,10 +271,7 @@ namespace JulyCore.Module.Http
             {
                 raw = await _provider.SendAsync(url, method, bodyBytes, _defaultHeaders, _timeoutSeconds, ct);
             }
-            catch (OperationCanceledException)
-            {
-                return new RawResult { Error = "请求已取消" };
-            }
+            catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
                 LogError($"[HTTP] 请求异常 {path}: {ex.Message}");

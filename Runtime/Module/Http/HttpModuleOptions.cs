@@ -18,5 +18,9 @@ namespace JulyCore.Module.Http
         public Action KickHandler;
 
         public Action<HttpQueueEntity, bool> BlockingHandler;
+
+        public int RetryBaseDelayMs = 1000;
+        public float RetryBackoffMultiplier = 2f;
+        public int RetryMaxDelayMs = 10000;
     }
 }

@@ -24,11 +24,6 @@ namespace JulyCore
                 Module.Configure(options);
             }
 
-            public static void SetRetryParams(int baseDelayMs, float backoffMultiplier, int maxDelayMs)
-            {
-                Module.SetRetryParams(baseDelayMs, backoffMultiplier, maxDelayMs);
-            }
-
             public static UniTask Send(HttpEntity entity, CancellationToken ct = default)
             {
                 return Module.Send(entity, ct);

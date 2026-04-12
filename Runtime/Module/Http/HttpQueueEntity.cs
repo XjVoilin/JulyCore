@@ -10,9 +10,11 @@ namespace JulyCore.Module.Http
     /// </summary>
     public abstract class HttpQueueEntity : HttpEntityBase
     {
-        public string RequestId { get; private set; } = Guid.NewGuid().ToString("N");
+        public string RequestId { get; private set; } = GenerateRequestId();
 
-        public void RegenerateRequestId() => RequestId = Guid.NewGuid().ToString("N");
+        public void RegenerateRequestId() => RequestId = GenerateRequestId();
+
+        private static string GenerateRequestId() => Guid.NewGuid().ToString("N");
 
         public virtual bool IsBlocking => false;
 
