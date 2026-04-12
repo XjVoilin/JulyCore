@@ -1,4 +1,3 @@
-using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using JulyCore.Module.Http;
@@ -20,14 +19,24 @@ namespace JulyCore
                 }
             }
 
-            public static void Configure(string baseUrl, int timeoutSeconds = 15)
+            public static void Configure(HttpModuleOptions options)
             {
-                Module.Configure(baseUrl, timeoutSeconds);
+                Module.Configure(options);
             }
 
-            public static UniTask Send(HttpEntityBase entity, CancellationToken ct = default)
+            public static void SetRetryParams(int baseDelayMs, float backoffMultiplier, int maxDelayMs)
+            {
+                Module.SetRetryParams(baseDelayMs, backoffMultiplier, maxDelayMs);
+            }
+
+            public static UniTask Send(HttpEntity entity, CancellationToken ct = default)
             {
                 return Module.Send(entity, ct);
+            }
+
+            public static void Send(HttpQueueEntity entity)
+            {
+                Module.Send(entity);
             }
 
             public static void SetDefaultHeader(string key, string value)
@@ -38,16 +47,6 @@ namespace JulyCore
             public static void RemoveDefaultHeader(string key)
             {
                 Module.RemoveDefaultHeader(key);
-            }
-
-            public static void SetReLoginHandler(int errorCode, Func<CancellationToken, UniTask<bool>> handler)
-            {
-                Module.SetReLoginHandler(errorCode, handler);
-            }
-
-            public static void SetErrorHandler(Action<int, string> handler)
-            {
-                Module.SetErrorHandler(handler);
             }
         }
     }

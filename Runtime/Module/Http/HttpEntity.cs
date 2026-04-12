@@ -28,7 +28,12 @@ namespace JulyCore.Module.Http
         protected abstract void SetResponseData(string dataJson);
     }
 
-    public abstract class HttpEntity<TResp> : HttpEntityBase
+    /// <summary>
+    /// 直发请求的非泛型标记基类。Send 重载靠此类型隔离队列实体。
+    /// </summary>
+    public abstract class HttpEntity : HttpEntityBase { }
+
+    public abstract class HttpEntity<TResp> : HttpEntity
     {
         public TResp RespData { get; protected set; }
     }

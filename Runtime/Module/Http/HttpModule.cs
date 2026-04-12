@@ -15,23 +15,22 @@ namespace JulyCore.Module.Http
         private IHttpProvider _provider;
 
         private string _baseUrl;
-        private int _timeoutSeconds = 15;
+        private int _timeoutSeconds = 10;
         private Dictionary<string, string> _defaultHeaders;
 
         private int _reLoginCode;
         private Func<CancellationToken, UniTask<bool>> _reLoginHandler;
         private Action<int, string> _errorHandler;
+        private int _kickCode;
+        private Action _kickHandler;
+        private Action<HttpQueueEntity, bool> _blockingHandler;
 
-        public void SetReLoginHandler(int errorCode, Func<CancellationToken, UniTask<bool>> handler)
-        {
-            _reLoginCode = errorCode;
-            _reLoginHandler = handler;
-        }
+        private readonly Queue<HttpQueueEntity> _queue = new();
+        private bool _isProcessing;
 
-        public void SetErrorHandler(Action<int, string> handler)
-        {
-            _errorHandler = handler;
-        }
+        private int _retryBaseDelayMs = 1000;
+        private float _retryBackoffMultiplier = 2f;
+        private int _retryMaxDelayMs = 10000;
 
         protected override LogChannel LogChannel => LogChannel.Network;
         public override int Priority => Frameworkconst.PriorityHttpModule;
@@ -39,9 +38,6 @@ namespace JulyCore.Module.Http
         protected override UniTask OnInitAsync()
         {
             _provider = GetProvider<IHttpProvider>();
-            if (_provider == null)
-                LogWarning($"[{Name}] IHttpProvider 未注册，HTTP 功能不可用");
-
             return UniTask.CompletedTask;
         }
 
@@ -49,12 +45,35 @@ namespace JulyCore.Module.Http
         {
             _provider = null;
             _defaultHeaders = null;
+            ClearQueue();
+            _isProcessing = false;
         }
 
-        public void Configure(string baseUrl, int timeoutSeconds = 15)
+        private void ClearQueue()
         {
-            _baseUrl = baseUrl;
-            _timeoutSeconds = timeoutSeconds;
+            while (_queue.Count > 0)
+                _queue.Dequeue().SetCompleted();
+        }
+
+        #region Configure
+
+        public void Configure(HttpModuleOptions options)
+        {
+            _baseUrl = options.BaseUrl;
+            _timeoutSeconds = options.TimeoutSeconds;
+            _errorHandler = options.ErrorHandler;
+            _reLoginCode = options.ReLoginCode;
+            _reLoginHandler = options.ReLoginHandler;
+            _kickCode = options.KickCode;
+            _kickHandler = options.KickHandler;
+            _blockingHandler = options.BlockingHandler;
+        }
+
+        public void SetRetryParams(int baseDelayMs, float backoffMultiplier, int maxDelayMs)
+        {
+            _retryBaseDelayMs = baseDelayMs;
+            _retryBackoffMultiplier = backoffMultiplier;
+            _retryMaxDelayMs = maxDelayMs;
         }
 
         public void SetDefaultHeader(string key, string value)
@@ -68,11 +87,21 @@ namespace JulyCore.Module.Http
             _defaultHeaders?.Remove(key);
         }
 
-        public async UniTask Send(HttpEntityBase entity, CancellationToken ct = default)
+        #endregion
+
+        #region Send — Direct Path
+
+        public async UniTask Send(HttpEntity entity, CancellationToken ct = default)
         {
             await SendInternal(entity, ct);
 
-            if (!entity.IsOk && entity.Code == _reLoginCode && _reLoginHandler != null)
+            if (!entity.IsOk && _kickCode != 0 && entity.Code == _kickCode)
+            {
+                _kickHandler?.Invoke();
+                return;
+            }
+
+            if (!entity.IsOk && _reLoginCode != 0 && entity.Code == _reLoginCode && _reLoginHandler != null)
             {
                 if (await _reLoginHandler(ct))
                     await SendInternal(entity, ct);
@@ -82,11 +111,114 @@ namespace JulyCore.Module.Http
                 _errorHandler?.Invoke(entity.Code, entity.Msg);
         }
 
+        #endregion
+
+        #region Send — Queue Path
+
+        public void Send(HttpQueueEntity entity)
+        {
+            _queue.Enqueue(entity);
+            if (!_isProcessing)
+                ProcessQueueAsync().Forget();
+        }
+
+        private async UniTask ProcessQueueAsync()
+        {
+            _isProcessing = true;
+
+            while (_queue.Count > 0)
+            {
+                var entity = _queue.Dequeue();
+
+                if (entity.IsBlocking)
+                    _blockingHandler?.Invoke(entity, true);
+
+                try
+                {
+                    await SendWithRetry(entity);
+
+                    if (_kickCode != 0 && entity.Code == _kickCode)
+                    {
+                        _kickHandler?.Invoke();
+                        ClearQueue();
+                        _isProcessing = false;
+                        return;
+                    }
+
+                    if (_reLoginCode != 0 && entity.Code == _reLoginCode && _reLoginHandler != null)
+                    {
+                        var success = await _reLoginHandler(GFCancellationToken);
+                        if (success)
+                        {
+                            entity.RegenerateRequestId();
+                            await SendWithRetry(entity);
+                        }
+                        else
+                        {
+                            ClearQueue();
+                            _isProcessing = false;
+                            return;
+                        }
+                    }
+
+                    if (entity.IsOk)
+                    {
+                        try { entity.OnResponse(); }
+                        catch (Exception ex) { LogError($"[HTTP] OnResponse 异常: {ex.Message}"); }
+                    }
+                    else
+                    {
+                        try { entity.OnError(); }
+                        catch (Exception ex) { LogError($"[HTTP] OnError 异常: {ex.Message}"); }
+                        _errorHandler?.Invoke(entity.Code, entity.Msg);
+                    }
+                }
+                finally
+                {
+                    if (entity.IsBlocking)
+                        _blockingHandler?.Invoke(entity, false);
+
+                    entity.SetCompleted();
+                }
+            }
+
+            _isProcessing = false;
+        }
+
+        private async UniTask SendWithRetry(HttpQueueEntity entity)
+        {
+            var retryCount = 0;
+
+            while (true)
+            {
+                await SendInternal(entity, GFCancellationToken);
+
+                if (entity.IsOk || entity.Code > 0)
+                    break;
+
+                var delay = (int)Math.Min(
+                    _retryBaseDelayMs * Math.Pow(_retryBackoffMultiplier, retryCount),
+                    _retryMaxDelayMs);
+
+                if (IsLogEnabled)
+                    Log($"[HTTP] 重试 #{retryCount + 1}，{delay}ms 后重发 {entity.Path}");
+
+                await UniTask.Delay(delay, cancellationToken: GFCancellationToken);
+                retryCount++;
+            }
+        }
+
+        #endregion
+
+        #region Internal
+
         private async UniTask SendInternal(HttpEntityBase entity, CancellationToken ct)
         {
             var logName = entity.LogTag != null ? $"{entity.Path} [{entity.LogTag}]" : entity.Path;
             var bodyJson = entity.BuildBody();
-            Log($"[HTTP] >>> {logName}\n{bodyJson ?? "(empty)"}");
+
+            if (IsLogEnabled)
+                Log($"[HTTP] >>> {logName}\n{bodyJson ?? "(empty)"}");
 
             var raw = await SendRawAsync(entity.Path, bodyJson, ct);
 
@@ -95,7 +227,8 @@ namespace JulyCore.Module.Http
                 try
                 {
                     entity.ParseResponse(raw.Text);
-                    Log($"[HTTP] <<< {logName} code={entity.Code}\n{raw.Text}");
+                    if (IsLogEnabled)
+                        Log($"[HTTP] <<< {logName} code={entity.Code}\n{raw.Text}");
                 }
                 catch (Exception ex)
                 {
@@ -111,8 +244,6 @@ namespace JulyCore.Module.Http
                 entity.Msg = raw.Error;
             }
         }
-
-        #region Internal
 
         private struct RawResult
         {
