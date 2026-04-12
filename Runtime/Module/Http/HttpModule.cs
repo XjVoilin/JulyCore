@@ -13,24 +13,11 @@ namespace JulyCore.Module.Http
     public class HttpModule : ModuleBase
     {
         private IHttpProvider _provider;
-
-        private string _baseUrl;
-        private int _timeoutSeconds = 10;
+        private HttpModuleOptions _options = new();
         private Dictionary<string, string> _defaultHeaders;
-
-        private int _reLoginCode;
-        private Func<CancellationToken, UniTask<bool>> _reLoginHandler;
-        private Action<int, string> _errorHandler;
-        private int _kickCode;
-        private Action _kickHandler;
-        private Action<HttpQueueEntity, bool> _blockingHandler;
 
         private readonly Queue<HttpQueueEntity> _queue = new();
         private bool _isProcessing;
-
-        private int _retryBaseDelayMs = 1000;
-        private float _retryBackoffMultiplier = 2f;
-        private int _retryMaxDelayMs = 10000;
 
         protected override LogChannel LogChannel => LogChannel.Network;
         public override int Priority => Frameworkconst.PriorityHttpModule;
@@ -57,20 +44,7 @@ namespace JulyCore.Module.Http
 
         #region Configure
 
-        public void Configure(HttpModuleOptions options)
-        {
-            _baseUrl = options.BaseUrl;
-            _timeoutSeconds = options.TimeoutSeconds;
-            _errorHandler = options.ErrorHandler;
-            _reLoginCode = options.ReLoginCode;
-            _reLoginHandler = options.ReLoginHandler;
-            _kickCode = options.KickCode;
-            _kickHandler = options.KickHandler;
-            _blockingHandler = options.BlockingHandler;
-            _retryBaseDelayMs = options.RetryBaseDelayMs;
-            _retryBackoffMultiplier = options.RetryBackoffMultiplier;
-            _retryMaxDelayMs = options.RetryMaxDelayMs;
-        }
+        public void Configure(HttpModuleOptions options) => _options = options;
 
         public void SetDefaultHeader(string key, string value)
         {
@@ -96,9 +70,9 @@ namespace JulyCore.Module.Http
 
             if (CheckKick(entity)) return;
 
-            if (!entity.IsOk && _reLoginCode != 0 && entity.Code == _reLoginCode && _reLoginHandler != null)
+            if (!entity.IsOk && _options.ReLoginCode != 0 && entity.Code == _options.ReLoginCode && _options.ReLoginHandler != null)
             {
-                if (await _reLoginHandler(ct))
+                if (await _options.ReLoginHandler(ct))
                 {
                     await SendInternal(entity, ct);
                     if (CheckKick(entity)) return;
@@ -106,7 +80,7 @@ namespace JulyCore.Module.Http
             }
 
             if (!entity.IsOk)
-                _errorHandler?.Invoke(entity.Code, entity.Msg);
+                _options.ErrorHandler?.Invoke(entity.Code, entity.Msg);
         }
 
         #endregion
@@ -130,7 +104,7 @@ namespace JulyCore.Module.Http
                     var entity = _queue.Dequeue();
 
                     if (entity.IsBlocking)
-                        _blockingHandler?.Invoke(entity, true);
+                        _options.BlockingHandler?.Invoke(entity, true);
 
                     try
                     {
@@ -138,9 +112,9 @@ namespace JulyCore.Module.Http
 
                         if (CheckKick(entity)) return;
 
-                        if (_reLoginCode != 0 && entity.Code == _reLoginCode && _reLoginHandler != null)
+                        if (_options.ReLoginCode != 0 && entity.Code == _options.ReLoginCode && _options.ReLoginHandler != null)
                         {
-                            var success = await _reLoginHandler(GFCancellationToken);
+                            var success = await _options.ReLoginHandler(GFCancellationToken);
                             if (!success) return;
 
                             entity.RegenerateRequestId();
@@ -158,13 +132,13 @@ namespace JulyCore.Module.Http
                         {
                             try { entity.OnError(); }
                             catch (Exception ex) { LogError($"[HTTP] OnError 异常: {ex.Message}"); }
-                            _errorHandler?.Invoke(entity.Code, entity.Msg);
+                            _options.ErrorHandler?.Invoke(entity.Code, entity.Msg);
                         }
                     }
                     finally
                     {
                         if (entity.IsBlocking)
-                            _blockingHandler?.Invoke(entity, false);
+                            _options.BlockingHandler?.Invoke(entity, false);
 
                         entity.SetCompleted();
                     }
@@ -189,11 +163,10 @@ namespace JulyCore.Module.Http
                     break;
 
                 var delay = (int)Math.Min(
-                    _retryBaseDelayMs * Math.Pow(_retryBackoffMultiplier, retryCount),
-                    _retryMaxDelayMs);
+                    _options.RetryBaseDelayMs * Math.Pow(_options.RetryBackoffMultiplier, retryCount),
+                    _options.RetryMaxDelayMs);
 
-                if (IsLogEnabled)
-                    Log($"[HTTP] 重试 #{retryCount + 1}，{delay}ms 后重发 {entity.Path}");
+                Log($"[HTTP] 重试 #{retryCount + 1}，{delay}ms 后重发 {entity.Path}");
 
                 await UniTask.Delay(delay, cancellationToken: GFCancellationToken);
                 retryCount++;
@@ -206,57 +179,21 @@ namespace JulyCore.Module.Http
 
         private bool CheckKick(HttpEntityBase entity)
         {
-            if (_kickCode == 0 || entity.IsOk || entity.Code != _kickCode) return false;
-            _kickHandler?.Invoke();
+            if (_options.KickCode == 0 || entity.IsOk || entity.Code != _options.KickCode) return false;
+            _options.KickHandler?.Invoke();
             return true;
         }
 
         private async UniTask SendInternal(HttpEntityBase entity, CancellationToken ct)
         {
-            var logName = entity.LogTag != null ? $"{entity.Path} [{entity.LogTag}]" : entity.Path;
-            var bodyJson = entity.BuildBody();
-
-            if (IsLogEnabled)
-                Log($"[HTTP] >>> {logName}\n{bodyJson ?? "(empty)"}");
-
-            var raw = await SendRawAsync(entity.Path, bodyJson, ct);
-
-            if (raw.IsSuccess)
-            {
-                try
-                {
-                    entity.ParseResponse(raw.Text);
-                    if (IsLogEnabled)
-                        Log($"[HTTP] <<< {logName} code={entity.Code}\n{raw.Text}");
-                }
-                catch (Exception ex)
-                {
-                    LogError($"[HTTP] <<< {logName} 响应解析失败: {ex.Message}");
-                    entity.Code = -1;
-                    entity.Msg = $"响应解析失败: {ex.Message}";
-                }
-            }
-            else
-            {
-                LogWarning($"[HTTP] <<< {logName} 失败: {raw.Error}");
-                entity.Code = -1;
-                entity.Msg = raw.Error;
-            }
-        }
-
-        private struct RawResult
-        {
-            public bool IsSuccess;
-            public string Text;
-            public string Error;
-        }
-
-        private async UniTask<RawResult> SendRawAsync(string path, string bodyJson, CancellationToken ct)
-        {
             if (_provider == null)
                 throw new InvalidOperationException("IHttpProvider 未注册");
 
-            var url = BuildUrl(path);
+            var logName = entity.LogTag != null ? $"{entity.Path} [{entity.LogTag}]" : entity.Path;
+            var bodyJson = entity.BuildBody();
+            Log($"[HTTP] >>> {logName}\n{bodyJson ?? "(empty)"}");
+
+            var url = BuildUrl(entity.Path);
             byte[] bodyBytes = null;
             var method = "GET";
 
@@ -269,29 +206,44 @@ namespace JulyCore.Module.Http
             HttpResponse raw;
             try
             {
-                raw = await _provider.SendAsync(url, method, bodyBytes, _defaultHeaders, _timeoutSeconds, ct);
+                raw = await _provider.SendAsync(url, method, bodyBytes, _defaultHeaders, _options.TimeoutSeconds, ct);
             }
             catch (OperationCanceledException) { throw; }
             catch (Exception ex)
             {
-                LogError($"[HTTP] 请求异常 {path}: {ex.Message}");
-                return new RawResult { Error = ex.Message };
+                LogError($"[HTTP] 请求异常 {entity.Path}: {ex.Message}");
+                entity.Code = -1;
+                entity.Msg = ex.Message;
+                return;
             }
 
             if (!raw.IsSuccess)
             {
-                LogWarning($"[HTTP] 请求失败 {path}: {raw.StatusCode} {raw.Error}");
-                return new RawResult { Error = raw.Error ?? $"HTTP {raw.StatusCode}" };
+                LogWarning($"[HTTP] 请求失败 {entity.Path}: {raw.StatusCode} {raw.Error}");
+                entity.Code = -1;
+                entity.Msg = raw.Error ?? $"HTTP {raw.StatusCode}";
+                return;
             }
 
-            return new RawResult { IsSuccess = true, Text = raw.GetText() };
+            var text = raw.GetText();
+            try
+            {
+                entity.ParseResponse(text);
+                Log($"[HTTP] <<< {logName} code={entity.Code}\n{text}");
+            }
+            catch (Exception ex)
+            {
+                LogError($"[HTTP] <<< {logName} 响应解析失败: {ex.Message}");
+                entity.Code = -1;
+                entity.Msg = $"响应解析失败: {ex.Message}";
+            }
         }
 
         private string BuildUrl(string path)
         {
-            if (string.IsNullOrEmpty(_baseUrl) || path.StartsWith("http"))
+            if (string.IsNullOrEmpty(_options.BaseUrl) || path.StartsWith("http"))
                 return path;
-            return _baseUrl.TrimEnd('/') + "/" + path.TrimStart('/');
+            return _options.BaseUrl.TrimEnd('/') + "/" + path.TrimStart('/');
         }
 
         #endregion

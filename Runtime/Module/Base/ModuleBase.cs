@@ -67,8 +67,6 @@ namespace JulyCore.Module.Base
             JLogger.LogChannelError(Name, message);
         }
 
-        protected bool IsLogEnabled => JLogger.IsChannelEnabled(LogChannel);
-
         #endregion
 
         #region 生命周期
