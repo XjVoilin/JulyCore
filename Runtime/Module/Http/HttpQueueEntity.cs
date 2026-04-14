@@ -6,15 +6,15 @@ namespace JulyCore.Module.Http
     /// <summary>
     /// 队列请求基类。Send(HttpQueueEntity) 入队即返回（void），由队列后台处理。
     /// 与 HttpEntity 平行，编译器强制隔离两条发送路径。
-    /// 需要感知完成时机时，调用方可 await entity.Completion（懒分配 TCS，fire-and-forget 路径零开销）。
     /// </summary>
     public abstract class HttpQueueEntity : HttpEntityBase
     {
-        public string RequestId { get; private set; } = GenerateRequestId();
+        public uint RequestId { get; private set; } = GenerateRequestId();
 
         public void RegenerateRequestId() => RequestId = GenerateRequestId();
 
-        private static string GenerateRequestId() => Guid.NewGuid().ToString("N");
+        private static uint GenerateRequestId()
+            => (uint)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
         public virtual bool IsBlocking => false;
 
