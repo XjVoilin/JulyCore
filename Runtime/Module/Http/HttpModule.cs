@@ -219,12 +219,12 @@ namespace JulyCore.Module.Http
 
             if (!raw.IsSuccess)
             {
-                entity.Code = raw.IsTimeout ? HttpEntityBase.CodeNetworkError : HttpEntityBase.CodeHttpError;
+                entity.Code = raw.HasResponse ? HttpEntityBase.CodeHttpError : HttpEntityBase.CodeNetworkError;
                 entity.Msg = raw.Error ?? $"HTTP {raw.StatusCode}";
-                if (raw.IsTimeout)
-                    LogWarning($"[HTTP] 请求超时 {entity.Path} ({raw.ElapsedMs}ms)");
-                else
+                if (raw.HasResponse)
                     LogWarning($"[HTTP] 请求失败 {entity.Path}: {raw.StatusCode} {raw.Error}");
+                else
+                    LogWarning($"[HTTP] 网络错误 {entity.Path}: {raw.Error} ({raw.ElapsedMs}ms)");
                 return;
             }
 
