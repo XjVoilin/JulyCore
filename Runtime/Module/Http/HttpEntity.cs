@@ -4,6 +4,10 @@ namespace JulyCore.Module.Http
 {
     public abstract class HttpEntityBase
     {
+        public const int CodeNetworkError = -1;
+        public const int CodeParseError = -2;
+        public const int CodeHttpError = -3;
+
         public abstract string Path { get; }
         public virtual string LogTag => null;
 

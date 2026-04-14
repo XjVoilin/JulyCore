@@ -9,6 +9,7 @@ namespace JulyCore.Data.Network
         public byte[] Data { get; set; }
         public string Error { get; set; }
         public long ElapsedMs { get; set; }
+        public bool IsTimeout { get; set; }
 
         public bool IsSuccess => StatusCode >= 200 && StatusCode < 300 && string.IsNullOrEmpty(Error);
 

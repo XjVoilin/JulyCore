@@ -159,7 +159,7 @@ namespace JulyCore.Module.Http
             {
                 await SendInternal(entity, GFCancellationToken);
 
-                if (entity.IsOk || entity.Code > 0)
+                if (entity.Code != HttpEntityBase.CodeNetworkError)
                     break;
 
                 var delay = (int)Math.Min(
@@ -212,16 +212,19 @@ namespace JulyCore.Module.Http
             catch (Exception ex)
             {
                 LogError($"[HTTP] 请求异常 {entity.Path}: {ex.Message}");
-                entity.Code = -1;
+                entity.Code = HttpEntityBase.CodeNetworkError;
                 entity.Msg = ex.Message;
                 return;
             }
 
             if (!raw.IsSuccess)
             {
-                LogWarning($"[HTTP] 请求失败 {entity.Path}: {raw.StatusCode} {raw.Error}");
-                entity.Code = -1;
+                entity.Code = raw.IsTimeout ? HttpEntityBase.CodeNetworkError : HttpEntityBase.CodeHttpError;
                 entity.Msg = raw.Error ?? $"HTTP {raw.StatusCode}";
+                if (raw.IsTimeout)
+                    LogWarning($"[HTTP] 请求超时 {entity.Path} ({raw.ElapsedMs}ms)");
+                else
+                    LogWarning($"[HTTP] 请求失败 {entity.Path}: {raw.StatusCode} {raw.Error}");
                 return;
             }
 
@@ -234,7 +237,7 @@ namespace JulyCore.Module.Http
             catch (Exception ex)
             {
                 LogError($"[HTTP] <<< {logName} 响应解析失败: {ex.Message}");
-                entity.Code = -1;
+                entity.Code = HttpEntityBase.CodeParseError;
                 entity.Msg = $"响应解析失败: {ex.Message}";
             }
         }
