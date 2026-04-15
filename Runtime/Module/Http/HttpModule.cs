@@ -220,6 +220,9 @@ namespace JulyCore.Module.Http
         private async UniTask SendWithRetry(HttpQueueEntity entity)
         {
             var retryCount = 0;
+            var checkExceeded = !entity.IsOptimistic
+                                && _options.QueueMaxRetryCount > 0
+                                && _options.RetryExceededHandler != null;
 
             while (true)
             {
@@ -228,16 +231,26 @@ namespace JulyCore.Module.Http
                 if (entity.Code != HttpEntityBase.CodeNetworkError)
                     break;
 
+                retryCount++;
+
+                if (checkExceeded && retryCount >= _options.QueueMaxRetryCount)
+                {
+                    LogWarning($"[HTTP] 悲观请求连续失败 {retryCount} 次，等待用户决策 {entity.Path}");
+                    var shouldContinue = await _options.RetryExceededHandler();
+                    if (!shouldContinue)
+                        break;
+                    retryCount = 0;
+                    continue;
+                }
+
                 var delay = (int)Math.Min(
-                    _options.RetryBaseDelayMs * Math.Pow(_options.RetryBackoffMultiplier, retryCount),
+                    _options.RetryBaseDelayMs * Math.Pow(_options.RetryBackoffMultiplier, retryCount - 1),
                     _options.RetryMaxDelayMs);
 
-                LogWarning($"[HTTP] 队列重试 #{retryCount + 1}，{delay}ms 后重发 {entity.Path}");
+                LogWarning($"[HTTP] 队列重试 #{retryCount}，{delay}ms 后重发 {entity.Path}");
 
                 await UniTask.Delay(delay, cancellationToken: GFCancellationToken);
-                retryCount++;
             }
-
         }
 
         #endregion
@@ -314,7 +327,7 @@ namespace JulyCore.Module.Http
                 Body = entity.BuildBody()
             });
             _saveProvider.SaveAsync(_pendingQueueSaveKey, _pendingData).Forget();
-            Log($"[HTTP] 持久化队列消息: {entity.Path}，当前 {_pendingData.Entries.Count} 条");
+            // Log($"[HTTP] 持久化队列消息: {entity.Path}，当前 {_pendingData.Entries.Count} 条");
         }
 
         private async UniTask RemovePendingEntryAsync()
@@ -323,7 +336,7 @@ namespace JulyCore.Module.Http
             var removed = _pendingData.Entries[0];
             _pendingData.Entries.RemoveAt(0);
             await _saveProvider.SaveAsync(_pendingQueueSaveKey, _pendingData);
-            Log($"[HTTP] 移除持久化条目: {removed.Path}，剩余 {_pendingData.Entries.Count} 条");
+            // Log($"[HTTP] 移除持久化条目: {removed.Path}，剩余 {_pendingData.Entries.Count} 条");
         }
 
         #endregion

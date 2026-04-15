@@ -19,6 +19,17 @@ namespace JulyCore.Module.Http
 
         public Action<bool> BlockingHandler;
 
+        /// <summary>
+        /// 悲观队列请求连续失败达到此次数后调用 RetryExceededHandler。
+        /// 0 表示不限制（默认无限重试）。
+        /// </summary>
+        public int QueueMaxRetryCount = 0;
+
+        /// <summary>
+        /// 悲观请求重试超限时的回调。返回 true 继续重试，false 放弃。
+        /// </summary>
+        public Func<UniTask<bool>> RetryExceededHandler;
+
         public int DirectMaxRetryCount = 3;
         public int RetryBaseDelayMs = 1000;
         public float RetryBackoffMultiplier = 2f;
