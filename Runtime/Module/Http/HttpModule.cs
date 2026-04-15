@@ -19,7 +19,6 @@ namespace JulyCore.Module.Http
 
         private readonly Queue<HttpQueueEntity> _queue = new();
         private bool _isProcessing;
-        private bool _isRetrying;
         private bool _blockingShown;
 
         private ISaveProvider _saveProvider;
@@ -41,7 +40,6 @@ namespace JulyCore.Module.Http
             _defaultHeaders = null;
             ClearQueue();
             _isProcessing = false;
-            _isRetrying = false;
             SetBlocking(false);
         }
 
@@ -141,8 +139,8 @@ namespace JulyCore.Module.Http
             if (entity.IsOptimistic)
                 entity.ApplyLocal();
 
-            if (!entity.IsOptimistic && _isRetrying)
-                SetBlocking(true);
+            if (_pendingData != null)
+                PersistPendingEntry(entity);
 
             _queue.Enqueue(entity);
             if (!_isProcessing)
@@ -161,21 +159,22 @@ namespace JulyCore.Module.Http
                     if (!entity.IsOptimistic)
                         SetBlocking(true);
 
+                    var removePending = true;
                     try
                     {
                         await SendWithRetry(entity);
 
-                        if (CheckKick(entity)) return;
+                        if (CheckKick(entity)) { removePending = false; return; }
 
                         if (_options.ReLoginCode != 0 && entity.Code == _options.ReLoginCode && _options.ReLoginHandler != null)
                         {
                             var success = await _options.ReLoginHandler(GFCancellationToken);
-                            if (!success) return;
+                            if (!success) { removePending = false; return; }
 
                             entity.RegenerateRequestId();
                             await SendWithRetry(entity);
 
-                            if (CheckKick(entity)) return;
+                            if (CheckKick(entity)) { removePending = false; return; }
                         }
 
                         if (entity.IsOk)
@@ -189,7 +188,6 @@ namespace JulyCore.Module.Http
                         }
                         else
                         {
-                            // TODO: 接入全量同步后，在此触发全量同步
                             try { entity.OnError(); }
                             catch (Exception ex) { LogError($"[HTTP] OnError 异常: {ex.Message}"); }
                             _options.ErrorHandler?.Invoke(entity.Code, entity.Msg);
@@ -197,6 +195,9 @@ namespace JulyCore.Module.Http
                     }
                     finally
                     {
+                        if (_pendingData != null && removePending)
+                            await RemovePendingEntryAsync();
+
                         if (!entity.IsOptimistic)
                             SetBlocking(false);
 
@@ -206,7 +207,6 @@ namespace JulyCore.Module.Http
             }
             finally
             {
-                _isRetrying = false;
                 ClearQueue();
                 _isProcessing = false;
             }
@@ -215,7 +215,6 @@ namespace JulyCore.Module.Http
         private async UniTask SendWithRetry(HttpQueueEntity entity)
         {
             var retryCount = 0;
-            var persisted = false;
 
             while (true)
             {
@@ -223,14 +222,6 @@ namespace JulyCore.Module.Http
 
                 if (entity.Code != HttpEntityBase.CodeNetworkError)
                     break;
-
-                if (retryCount == 0 && _pendingData != null)
-                {
-                    PersistPendingEntry(entity);
-                    persisted = true;
-                }
-
-                _isRetrying = true;
 
                 var delay = (int)Math.Min(
                     _options.RetryBaseDelayMs * Math.Pow(_options.RetryBackoffMultiplier, retryCount),
@@ -242,10 +233,6 @@ namespace JulyCore.Module.Http
                 retryCount++;
             }
 
-            _isRetrying = false;
-
-            if (persisted)
-                await RemovePendingEntryAsync();
         }
 
         #endregion
@@ -320,7 +307,6 @@ namespace JulyCore.Module.Http
                 Path = entity.Path,
                 Body = entity.BuildBody()
             });
-            _saveProvider.MarkDirty(_pendingQueueSaveKey);
             _saveProvider.SaveAsync(_pendingQueueSaveKey, _pendingData).Forget();
             Log($"[HTTP] 持久化队列消息: {entity.Path}，当前 {_pendingData.Entries.Count} 条");
         }

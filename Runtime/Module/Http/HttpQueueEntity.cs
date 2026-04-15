@@ -26,7 +26,7 @@ namespace JulyCore.Module.Http
 
         /// <summary>
         /// 乐观预更新。IsOptimistic=true 时由 HttpModule.Send 在入队前自动调用。
-        /// IsOptimistic设为false时,不需要覆写此方法
+        /// IsOptimistic 设为 false 时，不需要覆写此方法。
         /// </summary>
         public virtual void ApplyLocal() { }
 
