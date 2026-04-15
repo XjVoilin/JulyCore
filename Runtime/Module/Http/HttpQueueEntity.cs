@@ -16,7 +16,19 @@ namespace JulyCore.Module.Http
         private static uint GenerateRequestId()
             => (uint)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
-        public virtual bool IsBlocking => false;
+        /// <summary>
+        /// 是否乐观
+        /// 乐观说明:
+        ///     1: 调用即本地相应,框架自动调用ApplyLocal,Entity中ApplyLocal和OnResponse逻辑要区分
+        ///     2: 不需要等待遮罩
+        /// </summary>
+        public virtual bool IsOptimistic => true;
+
+        /// <summary>
+        /// 乐观预更新。IsOptimistic=true 时由 HttpModule.Send 在入队前自动调用。
+        /// IsOptimistic设为false时,不需要覆写此方法
+        /// </summary>
+        public virtual void ApplyLocal() { }
 
         protected internal virtual void OnResponse() { }
         protected internal virtual void OnError() { }

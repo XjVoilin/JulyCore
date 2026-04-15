@@ -7,6 +7,7 @@ using JulyCore.Core;
 using JulyCore.Data.Network;
 using JulyCore.Module.Base;
 using JulyCore.Provider.Http;
+using JulyCore.Provider.Save;
 
 namespace JulyCore.Module.Http
 {
@@ -18,6 +19,12 @@ namespace JulyCore.Module.Http
 
         private readonly Queue<HttpQueueEntity> _queue = new();
         private bool _isProcessing;
+        private bool _isRetrying;
+        private bool _blockingShown;
+
+        private ISaveProvider _saveProvider;
+        private HttpPendingQueueData _pendingData;
+        private string _pendingQueueSaveKey;
 
         protected override LogChannel LogChannel => LogChannel.Network;
         public override int Priority => Frameworkconst.PriorityHttpModule;
@@ -34,6 +41,8 @@ namespace JulyCore.Module.Http
             _defaultHeaders = null;
             ClearQueue();
             _isProcessing = false;
+            _isRetrying = false;
+            SetBlocking(false);
         }
 
         private void ClearQueue()
@@ -42,9 +51,28 @@ namespace JulyCore.Module.Http
                 _queue.Dequeue().SetCompleted();
         }
 
+        private void SetBlocking(bool show)
+        {
+            if (show == _blockingShown) return;
+            _blockingShown = show;
+            _options.BlockingHandler?.Invoke(show);
+        }
+
         #region Configure
 
-        public void Configure(HttpModuleOptions options) => _options = options;
+        public async UniTask Configure(HttpModuleOptions options)
+        {
+            _options = options;
+
+            if (!string.IsNullOrEmpty(options.PendingQueueSaveKey))
+            {
+                _pendingQueueSaveKey = options.PendingQueueSaveKey;
+                _saveProvider = GetProvider<ISaveProvider>();
+                _pendingData = await _saveProvider.LoadAndRegisterAsync<HttpPendingQueueData>(
+                    _pendingQueueSaveKey, GFCancellationToken);
+                Log($"[HTTP] 持久化队列已加载，待补发 {_pendingData.Entries.Count} 条");
+            }
+        }
 
         public void SetDefaultHeader(string key, string value)
         {
@@ -66,7 +94,28 @@ namespace JulyCore.Module.Http
         /// </summary>
         public async UniTask Send(HttpEntity entity, CancellationToken ct = default)
         {
-            await SendInternal(entity, ct);
+            var maxRetry = entity.MaxRetryCount >= 0 ? entity.MaxRetryCount : _options.DirectMaxRetryCount;
+            var retryCount = 0;
+
+            while (true)
+            {
+                await SendInternal(entity, ct);
+
+                if (entity.Code != HttpEntityBase.CodeNetworkError)
+                    break;
+
+                if (retryCount >= maxRetry)
+                    break;
+
+                var delay = (int)Math.Min(
+                    _options.RetryBaseDelayMs * Math.Pow(_options.RetryBackoffMultiplier, retryCount),
+                    _options.RetryMaxDelayMs);
+
+                Log($"[HTTP] 直发重试 #{retryCount + 1}，{delay}ms 后重发 {entity.Path}");
+
+                await UniTask.Delay(delay, cancellationToken: ct);
+                retryCount++;
+            }
 
             if (CheckKick(entity)) return;
 
@@ -89,6 +138,12 @@ namespace JulyCore.Module.Http
 
         public void Send(HttpQueueEntity entity)
         {
+            if (entity.IsOptimistic)
+                entity.ApplyLocal();
+
+            if (!entity.IsOptimistic && _isRetrying)
+                SetBlocking(true);
+
             _queue.Enqueue(entity);
             if (!_isProcessing)
                 ProcessQueueAsync().Forget();
@@ -103,8 +158,8 @@ namespace JulyCore.Module.Http
                 {
                     var entity = _queue.Dequeue();
 
-                    if (entity.IsBlocking)
-                        _options.BlockingHandler?.Invoke(entity, true);
+                    if (!entity.IsOptimistic)
+                        SetBlocking(true);
 
                     try
                     {
@@ -128,8 +183,13 @@ namespace JulyCore.Module.Http
                             try { entity.OnResponse(); }
                             catch (Exception ex) { LogError($"[HTTP] OnResponse 异常: {ex.Message}"); }
                         }
+                        else if (entity.Code < 0)
+                        {
+                            _options.ErrorHandler?.Invoke(entity.Code, entity.Msg);
+                        }
                         else
                         {
+                            // TODO: 接入全量同步后，在此触发全量同步
                             try { entity.OnError(); }
                             catch (Exception ex) { LogError($"[HTTP] OnError 异常: {ex.Message}"); }
                             _options.ErrorHandler?.Invoke(entity.Code, entity.Msg);
@@ -137,8 +197,8 @@ namespace JulyCore.Module.Http
                     }
                     finally
                     {
-                        if (entity.IsBlocking)
-                            _options.BlockingHandler?.Invoke(entity, false);
+                        if (!entity.IsOptimistic)
+                            SetBlocking(false);
 
                         entity.SetCompleted();
                     }
@@ -146,6 +206,7 @@ namespace JulyCore.Module.Http
             }
             finally
             {
+                _isRetrying = false;
                 ClearQueue();
                 _isProcessing = false;
             }
@@ -154,6 +215,7 @@ namespace JulyCore.Module.Http
         private async UniTask SendWithRetry(HttpQueueEntity entity)
         {
             var retryCount = 0;
+            var persisted = false;
 
             while (true)
             {
@@ -161,6 +223,14 @@ namespace JulyCore.Module.Http
 
                 if (entity.Code != HttpEntityBase.CodeNetworkError)
                     break;
+
+                if (retryCount == 0 && _pendingData != null)
+                {
+                    PersistPendingEntry(entity);
+                    persisted = true;
+                }
+
+                _isRetrying = true;
 
                 var delay = (int)Math.Min(
                     _options.RetryBaseDelayMs * Math.Pow(_options.RetryBackoffMultiplier, retryCount),
@@ -171,6 +241,97 @@ namespace JulyCore.Module.Http
                 await UniTask.Delay(delay, cancellationToken: GFCancellationToken);
                 retryCount++;
             }
+
+            _isRetrying = false;
+
+            if (persisted)
+                await RemovePendingEntryAsync();
+        }
+
+        #endregion
+
+        public bool HasPendingEntries()
+            => _pendingData != null && _pendingData.Entries.Count > 0;
+
+        #region Replay — 补发流程
+
+        private class ReplayEntry : HttpEntityBase
+        {
+            public override string Path { get; }
+            private readonly string _body;
+
+            internal ReplayEntry(string path, string body)
+            {
+                Path = path;
+                _body = body;
+            }
+
+            protected internal override string BuildBody() => _body;
+            protected override void SetResponseData(string dataJson) { }
+        }
+
+        public UniTask ReplayPending()
+        {
+            if (_pendingData == null || _pendingData.Entries.Count == 0) 
+                return UniTask.CompletedTask;
+            Log($"[HTTP] 开始补发 {_pendingData.Entries.Count} 条持久化消息");
+            return ReplayPendingAsync();
+        }
+
+        private async UniTask ReplayPendingAsync()
+        {
+            while (_pendingData.Entries.Count > 0)
+            {
+                var entry = _pendingData.Entries[0];
+                var entity = new ReplayEntry(entry.Path, entry.Body);
+
+                var retryCount = 0;
+                while (true)
+                {
+                    await SendInternal(entity, GFCancellationToken);
+
+                    if (entity.Code != HttpEntityBase.CodeNetworkError)
+                        break;
+
+                    var delay = (int)Math.Min(
+                        _options.RetryBaseDelayMs * Math.Pow(_options.RetryBackoffMultiplier, retryCount),
+                        _options.RetryMaxDelayMs);
+
+                    Log($"[HTTP] 补发重试 #{retryCount + 1}，{delay}ms 后重发 {entry.Path}");
+
+                    await UniTask.Delay(delay, cancellationToken: GFCancellationToken);
+                    retryCount++;
+                }
+
+                _pendingData.Entries.RemoveAt(0);
+                await _saveProvider.SaveAsync(_pendingQueueSaveKey, _pendingData);
+                Log($"[HTTP] 补发完成: {entry.Path}，剩余 {_pendingData.Entries.Count} 条");
+            }
+        }
+
+        #endregion
+
+        #region Pending — 持久化操作
+
+        private void PersistPendingEntry(HttpQueueEntity entity)
+        {
+            _pendingData.Entries.Add(new HttpPendingEntry
+            {
+                Path = entity.Path,
+                Body = entity.BuildBody()
+            });
+            _saveProvider.MarkDirty(_pendingQueueSaveKey);
+            _saveProvider.SaveAsync(_pendingQueueSaveKey, _pendingData).Forget();
+            Log($"[HTTP] 持久化队列消息: {entity.Path}，当前 {_pendingData.Entries.Count} 条");
+        }
+
+        private async UniTask RemovePendingEntryAsync()
+        {
+            if (_pendingData.Entries.Count == 0) return;
+            var removed = _pendingData.Entries[0];
+            _pendingData.Entries.RemoveAt(0);
+            await _saveProvider.SaveAsync(_pendingQueueSaveKey, _pendingData);
+            Log($"[HTTP] 移除持久化条目: {removed.Path}，剩余 {_pendingData.Entries.Count} 条");
         }
 
         #endregion
@@ -203,28 +364,21 @@ namespace JulyCore.Module.Http
                 method = "POST";
             }
 
-            HttpResponse raw;
-            try
+            var raw = await _provider.SendAsync(url, method, bodyBytes, _defaultHeaders, _options.TimeoutSeconds, ct);
+
+            if (raw.IsNetworkError)
             {
-                raw = await _provider.SendAsync(url, method, bodyBytes, _defaultHeaders, _options.TimeoutSeconds, ct);
-            }
-            catch (OperationCanceledException) { throw; }
-            catch (Exception ex)
-            {
-                LogError($"[HTTP] 请求异常 {entity.Path}: {ex.Message}");
                 entity.Code = HttpEntityBase.CodeNetworkError;
-                entity.Msg = ex.Message;
+                entity.Msg = raw.Error ?? "Network error";
+                LogWarning($"[HTTP] 网络错误 {entity.Path}: {raw.Error} ({raw.ElapsedMs}ms)");
                 return;
             }
 
             if (!raw.IsSuccess)
             {
-                entity.Code = raw.HasResponse ? HttpEntityBase.CodeHttpError : HttpEntityBase.CodeNetworkError;
+                entity.Code = HttpEntityBase.CodeHttpError;
                 entity.Msg = raw.Error ?? $"HTTP {raw.StatusCode}";
-                if (raw.HasResponse)
-                    LogWarning($"[HTTP] 请求失败 {entity.Path}: {raw.StatusCode} {raw.Error}");
-                else
-                    LogWarning($"[HTTP] 网络错误 {entity.Path}: {raw.Error} ({raw.ElapsedMs}ms)");
+                LogWarning($"[HTTP] 请求失败 {entity.Path}: {raw.StatusCode} {raw.Error}");
                 return;
             }
 

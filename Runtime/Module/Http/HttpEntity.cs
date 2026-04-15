@@ -15,6 +15,7 @@ namespace JulyCore.Module.Http
         public string Msg { get; protected internal set; }
         public int RespMsgId { get; protected internal set; }
         public bool IsOk => Code == 0;
+        public virtual int MaxRetryCount => -1;
 
         protected internal virtual string BuildBody() => null;
 

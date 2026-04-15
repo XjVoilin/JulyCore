@@ -19,9 +19,9 @@ namespace JulyCore
                 }
             }
 
-            public static void Configure(HttpModuleOptions options)
+            public static UniTask Configure(HttpModuleOptions options)
             {
-                Module.Configure(options);
+                return Module.Configure(options);
             }
 
             public static UniTask Send(HttpEntity entity, CancellationToken ct = default)
@@ -37,6 +37,16 @@ namespace JulyCore
             public static void SetDefaultHeader(string key, string value)
             {
                 Module.SetDefaultHeader(key, value);
+            }
+
+            public static bool HasPendingEntries()
+            {
+                return Module.HasPendingEntries();
+            }
+
+            public static UniTask ReplayPending()
+            {
+                return Module.ReplayPending();
             }
 
             public static void RemoveDefaultHeader(string key)
