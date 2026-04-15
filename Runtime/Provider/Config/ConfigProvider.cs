@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Threading;
-using Cysharp.Threading.Tasks;
 using JulyCore.Core;
 using JulyCore.Provider.Base;
 using JulyCore.Provider.Resource;
@@ -27,19 +25,6 @@ namespace JulyCore.Provider.Config
         public ConfigProvider(IResourceProvider resourceProvider)
         {
             _resourceProvider = resourceProvider ?? throw new ArgumentNullException(nameof(resourceProvider));
-        }
-
-        /// <summary>
-        /// 初始化（简单配置模式不需要整体初始化）
-        /// </summary>
-        public UniTask InitAsync(CancellationToken ct = default)
-        {
-            return UniTask.CompletedTask;
-        }
-
-        public UniTask InitAllAsync(CancellationToken token)
-        {
-            return UniTask.CompletedTask;
         }
 
         /// <summary>

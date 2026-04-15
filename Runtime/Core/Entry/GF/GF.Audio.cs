@@ -47,7 +47,7 @@ namespace JulyCore
             /// <param name="options">播放选项，null使用默认选项</param>
             public static void PlayBGM(string fileName, BGMPlayOptions options = null)
             {
-                Module.PlayBGMAsync(fileName, options, _context.CancellationToken).Forget();
+                Module.PlayBGMAsync(fileName, options).Forget();
             }
 
             /// <summary>
@@ -58,7 +58,7 @@ namespace JulyCore
             /// <returns>是否播放成功</returns>
             public static async UniTask<bool> PlayBGMAsync(string fileName, BGMPlayOptions options = null)
             {
-                return await Module.PlayBGMAsync(fileName, options, _context.CancellationToken);
+                return await Module.PlayBGMAsync(fileName, options);
             }
 
             /// <summary>

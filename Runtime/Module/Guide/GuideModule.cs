@@ -552,7 +552,7 @@ namespace JulyCore.Module.Guide
         {
             try
             {
-                _progressData = await _saveProvider.LoadAndRegisterAsync<GuideProgressData>(SAVE_KEY, GFCancellationToken);
+                _progressData = await _saveProvider.LoadAndRegisterAsync<GuideProgressData>(SAVE_KEY);
                 if (_progressData != null && (_progressData.completedFlows?.Count > 0 || !string.IsNullOrEmpty(_progressData.currentFlowId)))
                 {
                     _guideProvider.ImportProgress(_progressData);
@@ -580,7 +580,7 @@ namespace JulyCore.Module.Guide
                     
                     // 新手引导是关键数据，立即保存
                     _saveProvider.MarkDirty(SAVE_KEY);
-                    var results = await _saveProvider.SaveRegisteredAsync(new[] { SAVE_KEY }, GFCancellationToken);
+                    var results = await _saveProvider.SaveRegisteredAsync(new[] { SAVE_KEY });
                     if (!results.TryGetValue(SAVE_KEY, out var result) || !result.Success)
                     {
                         LogWarning($"[{Name}] 引导进度保存失败");

@@ -19,9 +19,9 @@ namespace JulyCore
                 }
             }
 
-            public static UniTask Configure(HttpModuleOptions options)
+            public static UniTask Configure(HttpModuleOptions options, IHttpHandler handler)
             {
-                return Module.Configure(options);
+                return Module.Configure(options, handler);
             }
 
             public static UniTask Send(HttpEntity entity, CancellationToken ct = default)

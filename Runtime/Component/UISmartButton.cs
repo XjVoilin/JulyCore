@@ -23,6 +23,7 @@ public class UISmartButton : MonoBehaviour,
     public float cooldownTime = 0.5f;
 
     [Header("Audio")]
+    public bool enableSound = true;
     [Tooltip("点击音效名（留空使用 FrameworkConfig 默认值）")]
     [SerializeField] private string clickSfx;
 
@@ -145,6 +146,7 @@ public class UISmartButton : MonoBehaviour,
 
     private void PlayClickSound()
     {
+        if (!enableSound) return;
         var sfx = !string.IsNullOrEmpty(clickSfx) ? clickSfx : GF.Audio.DefaultClickSfx;
         if (!string.IsNullOrEmpty(sfx))
             GF.Audio.PlaySFXAsync(sfx).Forget();

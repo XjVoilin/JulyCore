@@ -538,7 +538,19 @@ namespace JulyCore.Provider.UI
                 UnityEngine.Object.DontDestroyOnLoad(rootObj);
             }
 
+            // DestroyStaleEventSystems();
+
             CreateUICamera();
+        }
+
+        private static void DestroyStaleEventSystems()
+        {
+            var owned = UnityEngine.EventSystems.EventSystem.current;
+            foreach (var es in UnityEngine.Object.FindObjectsOfType<UnityEngine.EventSystems.EventSystem>())
+            {
+                if (es != owned)
+                    UnityEngine.Object.Destroy(es.gameObject);
+            }
         }
 
         private void CreateUICamera()

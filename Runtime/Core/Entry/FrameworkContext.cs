@@ -1,4 +1,3 @@
-using System.Threading;
 using Cysharp.Threading.Tasks;
 using JulyCore.Core.Config;
 
@@ -44,8 +43,6 @@ namespace JulyCore.Core
         /// 框架配置
         /// </summary>
         internal FrameworkConfig FrameworkConfig => _frameworkConfig;
-        
-        public CancellationToken CancellationToken { get; private set; }
 
         internal FrameworkContext(FrameworkConfig frameworkConfig)
         {
@@ -88,9 +85,8 @@ namespace JulyCore.Core
         /// <summary>
         /// 初始化所有未初始化的 Provider（支持多次调用，已初始化的会被跳过）
         /// </summary>
-        public async UniTask InitProvidersAsync(CancellationToken cancellationToken = default)
+        public async UniTask InitProvidersAsync()
         {
-            CancellationToken = cancellationToken;
             await _providerService.InitAllAsync();
         }
 
@@ -116,7 +112,6 @@ namespace JulyCore.Core
             _providerService.ShutdownAll();
 
             _isInitialized = false;
-            CancellationToken = CancellationToken.None;
             JLogger.Log($"{Frameworkconst.TagFrameworkContext} 框架已关闭");
         }
 

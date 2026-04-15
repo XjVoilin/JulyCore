@@ -21,15 +21,12 @@ namespace JulyCore.Core
         /// <summary>
         /// 初始化Provider
         /// 框架启动时调用，用于初始化底层能力
-        /// 使用框架级 CancellationToken（从 FrameworkContext 获取）
         /// </summary>
-        /// <returns>初始化任务</returns>
         UniTask InitAsync();
 
         /// <summary>
         /// 关闭Provider
         /// 框架关闭时调用，用于清理资源但保留实例
-        /// 使用框架级 CancellationToken（从 FrameworkContext 获取）
         /// </summary>
         void Shutdown();
     }

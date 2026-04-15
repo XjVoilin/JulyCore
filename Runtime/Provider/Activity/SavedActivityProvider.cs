@@ -27,8 +27,7 @@ namespace JulyCore.Provider.Activity
         protected override async UniTask OnInitAsync()
         {
             _runtimeData = await _saveProvider.LoadAndRegisterAsync<ActivityRuntimeData>(
-                Frameworkconst.ActivitySaveKey,
-                CancellationToken);
+                Frameworkconst.ActivitySaveKey);
         }
 
         protected override void OnShutdown()

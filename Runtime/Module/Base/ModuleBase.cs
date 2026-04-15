@@ -1,4 +1,3 @@
-using System.Threading;
 using Cysharp.Threading.Tasks;
 using JulyCore.Core;
 using JulyCore.Core.Config;
@@ -18,8 +17,6 @@ namespace JulyCore.Module.Base
         public bool IsInitialized => _isInitialized;
         public virtual int Priority => 0;
         protected abstract LogChannel LogChannel { get; }
-
-        protected CancellationToken GFCancellationToken => _context.CancellationToken;
 
         #region 受控服务访问
 

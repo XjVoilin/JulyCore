@@ -1,5 +1,4 @@
 using System;
-using System.Threading;
 using Cysharp.Threading.Tasks;
 using JulyCore.Core;
 
@@ -45,11 +44,6 @@ namespace JulyCore.Provider.Base
         /// </summary>
         protected abstract LogChannel LogChannel { get; }
         
-        /// <summary>
-        /// 框架取消令牌
-        /// </summary>
-        protected CancellationToken CancellationToken => FrameworkContext.Instance.CancellationToken;
-
         public UniTask InitAsync()
         {
             if (_isInitialized)

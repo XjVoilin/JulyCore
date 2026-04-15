@@ -42,7 +42,7 @@ namespace JulyCore.Core.Launch
             => _frameworkContext.ReplaceProvider(newProvider);
 
         public async UniTask InitProvidersAsync()
-            => await _frameworkContext.InitProvidersAsync(Token);
+            => await _frameworkContext.InitProvidersAsync();
 
         public async UniTask InitModulesAsync()
             => await _frameworkContext.InitModulesAsync();

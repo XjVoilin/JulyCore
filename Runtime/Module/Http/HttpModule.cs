@@ -14,11 +14,16 @@ namespace JulyCore.Module.Http
     public class HttpModule : ModuleBase
     {
         private IHttpProvider _provider;
+        private IHttpHandler _handler;
         private HttpModuleOptions _options = new();
         private Dictionary<string, string> _defaultHeaders;
 
         private readonly Queue<HttpQueueEntity> _queue = new();
         private bool _isProcessing;
+        /// <summary>
+        /// 队列是否是悲观模式
+        /// </summary>
+        private bool _isPessimistic;
         private bool _blockingShown;
 
         private ISaveProvider _saveProvider;
@@ -36,11 +41,13 @@ namespace JulyCore.Module.Http
 
         protected override void OnShutdown()
         {
-            _provider = null;
-            _defaultHeaders = null;
             ClearQueue();
             _isProcessing = false;
+            _isPessimistic = false;
             SetBlocking(false);
+            _provider = null;
+            _handler = null;
+            _defaultHeaders = null;
         }
 
         private void ClearQueue()
@@ -53,21 +60,22 @@ namespace JulyCore.Module.Http
         {
             if (show == _blockingShown) return;
             _blockingShown = show;
-            _options.BlockingHandler?.Invoke(show);
+            _handler?.OnBlockingChanged(show);
         }
 
         #region Configure
 
-        public async UniTask Configure(HttpModuleOptions options)
+        public async UniTask Configure(HttpModuleOptions options, IHttpHandler handler)
         {
             _options = options;
+            _handler = handler;
 
             if (!string.IsNullOrEmpty(options.PendingQueueSaveKey))
             {
                 _pendingQueueSaveKey = options.PendingQueueSaveKey;
                 _saveProvider = GetProvider<ISaveProvider>();
                 _pendingData = await _saveProvider.LoadAndRegisterAsync<HttpPendingQueueData>(
-                    _pendingQueueSaveKey, GFCancellationToken);
+                    _pendingQueueSaveKey);
                 Log($"[HTTP] 持久化队列已加载，待补发 {_pendingData.Entries.Count} 条");
             }
         }
@@ -88,11 +96,11 @@ namespace JulyCore.Module.Http
         #region Send — Direct Path
 
         /// <summary>
-        /// OperationCanceledException 会原样抛给调用方，不触发 errorHandler。
+        /// OperationCanceledException 会原样抛给调用方，不触发 OnError。
         /// </summary>
         public async UniTask Send(HttpEntity entity, CancellationToken ct = default)
         {
-            var maxRetry = entity.MaxRetryCount >= 0 ? entity.MaxRetryCount : _options.DirectMaxRetryCount;
+            var maxRetry = entity.MaxRetryCount >= 0 ? entity.MaxRetryCount : _options.MaxRetryCount;
             var retryCount = 0;
 
             while (true)
@@ -105,21 +113,18 @@ namespace JulyCore.Module.Http
                 if (retryCount >= maxRetry)
                     break;
 
-                var delay = (int)Math.Min(
-                    _options.RetryBaseDelayMs * Math.Pow(_options.RetryBackoffMultiplier, retryCount),
-                    _options.RetryMaxDelayMs);
-
+                var delay = _options.CalculateRetryDelay(retryCount);
                 LogWarning($"[HTTP] 直发重试 #{retryCount + 1}，{delay}ms 后重发 {entity.Path}");
-
                 await UniTask.Delay(delay, cancellationToken: ct);
                 retryCount++;
             }
 
             if (CheckKick(entity)) return;
 
-            if (!entity.IsOk && _options.ReLoginCode != 0 && entity.Code == _options.ReLoginCode && _options.ReLoginHandler != null)
+            if (!entity.IsOk && _options.ReLoginCode != 0
+                              && entity.Code == _options.ReLoginCode)
             {
-                if (await _options.ReLoginHandler(ct))
+                if (_handler != null && await _handler.OnReLoginRequired(ct))
                 {
                     await SendInternal(entity, ct);
                     if (CheckKick(entity)) return;
@@ -127,7 +132,7 @@ namespace JulyCore.Module.Http
             }
 
             if (!entity.IsOk)
-                _options.ErrorHandler?.Invoke(entity.Code, entity.Msg);
+                _handler?.OnError(entity.Code, entity.Msg);
         }
 
         #endregion
@@ -142,6 +147,12 @@ namespace JulyCore.Module.Http
             if (_pendingData != null)
                 PersistPendingEntry(entity);
 
+            if (!entity.IsOptimistic && !_isPessimistic)
+            {
+                _isPessimistic = true;
+                SetBlocking(true);
+            }
+
             _queue.Enqueue(entity);
             if (!_isProcessing)
                 ProcessQueueAsync().Forget();
@@ -155,10 +166,6 @@ namespace JulyCore.Module.Http
                 while (_queue.Count > 0)
                 {
                     var entity = _queue.Dequeue();
-
-                    if (!entity.IsOptimistic)
-                        SetBlocking(true);
-
                     var removePending = true;
                     try
                     {
@@ -166,9 +173,10 @@ namespace JulyCore.Module.Http
 
                         if (CheckKick(entity)) { removePending = false; return; }
 
-                        if (_options.ReLoginCode != 0 && entity.Code == _options.ReLoginCode && _options.ReLoginHandler != null)
+                        if (!entity.IsOk && _options.ReLoginCode != 0
+                            && entity.Code == _options.ReLoginCode)
                         {
-                            var success = await _options.ReLoginHandler(GFCancellationToken);
+                            var success = _handler != null && await _handler.OnReLoginRequired(default);
                             if (!success) { removePending = false; return; }
 
                             entity.RegenerateRequestId();
@@ -177,21 +185,7 @@ namespace JulyCore.Module.Http
                             if (CheckKick(entity)) { removePending = false; return; }
                         }
 
-                        if (entity.IsOk)
-                        {
-                            try { entity.OnResponse(); }
-                            catch (Exception ex) { LogError($"[HTTP] OnResponse 异常: {ex.Message}"); }
-                        }
-                        else if (entity.Code < 0)
-                        {
-                            _options.ErrorHandler?.Invoke(entity.Code, entity.Msg);
-                        }
-                        else
-                        {
-                            try { entity.OnError(); }
-                            catch (Exception ex) { LogError($"[HTTP] OnError 异常: {ex.Message}"); }
-                            _options.ErrorHandler?.Invoke(entity.Code, entity.Msg);
-                        }
+                        DispatchResult(entity);
                     }
                     catch (OperationCanceledException)
                     {
@@ -202,10 +196,6 @@ namespace JulyCore.Module.Http
                     {
                         if (_pendingData != null && removePending)
                             await RemovePendingEntryAsync();
-
-                        if (!entity.IsOptimistic)
-                            SetBlocking(false);
-
                         entity.SetCompleted();
                     }
                 }
@@ -214,42 +204,56 @@ namespace JulyCore.Module.Http
             {
                 ClearQueue();
                 _isProcessing = false;
+                _isPessimistic = false;
+                SetBlocking(false);
             }
+        }
+
+        private void DispatchResult(HttpQueueEntity entity)
+        {
+            if (entity.IsOk)
+            {
+                try { entity.OnResponse(); }
+                catch (Exception ex) { LogError($"[HTTP] OnResponse 异常: {ex.Message}"); }
+                return;
+            }
+
+            if (entity.Code < 0)
+            {
+                _handler?.OnError(entity.Code, entity.Msg);
+                return;
+            }
+
+            try { entity.OnError(); }
+            catch (Exception ex) { LogError($"[HTTP] OnError 异常: {ex.Message}"); }
+            _handler?.OnError(entity.Code, entity.Msg);
         }
 
         private async UniTask SendWithRetry(HttpQueueEntity entity)
         {
             var retryCount = 0;
-            var checkExceeded = !entity.IsOptimistic
-                                && _options.QueueMaxRetryCount > 0
-                                && _options.RetryExceededHandler != null;
 
             while (true)
             {
-                await SendInternal(entity, GFCancellationToken);
+                await SendInternal(entity, default);
 
                 if (entity.Code != HttpEntityBase.CodeNetworkError)
                     break;
 
                 retryCount++;
 
-                if (checkExceeded && retryCount >= _options.QueueMaxRetryCount)
+                if (_isPessimistic && retryCount >= _options.MaxRetryCount)
                 {
-                    LogWarning($"[HTTP] 悲观请求连续失败 {retryCount} 次，等待用户决策 {entity.Path}");
-                    var shouldContinue = await _options.RetryExceededHandler();
-                    if (!shouldContinue)
-                        break;
+                    LogWarning($"[HTTP] 队列重试达上限 {retryCount} 次，等待用户决策 {entity.Path}");
+                    var shouldContinue = _handler != null && await _handler.OnRetryExceeded();
+                    if (!shouldContinue) break;
                     retryCount = 0;
                     continue;
                 }
 
-                var delay = (int)Math.Min(
-                    _options.RetryBaseDelayMs * Math.Pow(_options.RetryBackoffMultiplier, retryCount - 1),
-                    _options.RetryMaxDelayMs);
-
+                var delay = _options.CalculateRetryDelay(retryCount - 1);
                 LogWarning($"[HTTP] 队列重试 #{retryCount}，{delay}ms 后重发 {entity.Path}");
-
-                await UniTask.Delay(delay, cancellationToken: GFCancellationToken);
+                await UniTask.Delay(delay);
             }
         }
 
@@ -277,7 +281,7 @@ namespace JulyCore.Module.Http
 
         public UniTask ReplayPending()
         {
-            if (_pendingData == null || _pendingData.Entries.Count == 0) 
+            if (_pendingData == null || _pendingData.Entries.Count == 0)
                 return UniTask.CompletedTask;
             Log($"[HTTP] 开始补发 {_pendingData.Entries.Count} 条持久化消息");
             return ReplayPendingAsync();
@@ -293,18 +297,14 @@ namespace JulyCore.Module.Http
                 var retryCount = 0;
                 while (true)
                 {
-                    await SendInternal(entity, GFCancellationToken);
+                    await SendInternal(entity, default);
 
                     if (entity.Code != HttpEntityBase.CodeNetworkError)
                         break;
 
-                    var delay = (int)Math.Min(
-                        _options.RetryBaseDelayMs * Math.Pow(_options.RetryBackoffMultiplier, retryCount),
-                        _options.RetryMaxDelayMs);
-
+                    var delay = _options.CalculateRetryDelay(retryCount);
                     LogWarning($"[HTTP] 补发重试 #{retryCount + 1}，{delay}ms 后重发 {entry.Path}");
-
-                    await UniTask.Delay(delay, cancellationToken: GFCancellationToken);
+                    await UniTask.Delay(delay);
                     retryCount++;
                 }
 
@@ -327,16 +327,13 @@ namespace JulyCore.Module.Http
                 Body = entity.BuildBody()
             });
             _saveProvider.SaveAsync(_pendingQueueSaveKey, _pendingData).Forget();
-            // Log($"[HTTP] 持久化队列消息: {entity.Path}，当前 {_pendingData.Entries.Count} 条");
         }
 
         private async UniTask RemovePendingEntryAsync()
         {
             if (_pendingData.Entries.Count == 0) return;
-            var removed = _pendingData.Entries[0];
             _pendingData.Entries.RemoveAt(0);
             await _saveProvider.SaveAsync(_pendingQueueSaveKey, _pendingData);
-            // Log($"[HTTP] 移除持久化条目: {removed.Path}，剩余 {_pendingData.Entries.Count} 条");
         }
 
         #endregion
@@ -346,7 +343,7 @@ namespace JulyCore.Module.Http
         private bool CheckKick(HttpEntityBase entity)
         {
             if (_options.KickCode == 0 || entity.IsOk || entity.Code != _options.KickCode) return false;
-            _options.KickHandler?.Invoke();
+            _handler?.OnKicked();
             return true;
         }
 

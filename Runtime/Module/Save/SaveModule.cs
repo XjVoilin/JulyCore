@@ -115,7 +115,7 @@ namespace JulyCore.Module.Save
                 return new Dictionary<string, SaveResult>();
             }
 
-            var results = await _saveProvider.SaveRegisteredAsync(keysToSave, GFCancellationToken);
+            var results = await _saveProvider.SaveRegisteredAsync(keysToSave);
             return results;
         }
 
