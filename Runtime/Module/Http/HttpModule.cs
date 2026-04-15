@@ -109,7 +109,7 @@ namespace JulyCore.Module.Http
                     _options.RetryBaseDelayMs * Math.Pow(_options.RetryBackoffMultiplier, retryCount),
                     _options.RetryMaxDelayMs);
 
-                Log($"[HTTP] 直发重试 #{retryCount + 1}，{delay}ms 后重发 {entity.Path}");
+                LogWarning($"[HTTP] 直发重试 #{retryCount + 1}，{delay}ms 后重发 {entity.Path}");
 
                 await UniTask.Delay(delay, cancellationToken: ct);
                 retryCount++;
@@ -193,6 +193,11 @@ namespace JulyCore.Module.Http
                             _options.ErrorHandler?.Invoke(entity.Code, entity.Msg);
                         }
                     }
+                    catch (OperationCanceledException)
+                    {
+                        removePending = false;
+                        return;
+                    }
                     finally
                     {
                         if (_pendingData != null && removePending)
@@ -227,7 +232,7 @@ namespace JulyCore.Module.Http
                     _options.RetryBaseDelayMs * Math.Pow(_options.RetryBackoffMultiplier, retryCount),
                     _options.RetryMaxDelayMs);
 
-                Log($"[HTTP] 重试 #{retryCount + 1}，{delay}ms 后重发 {entity.Path}");
+                LogWarning($"[HTTP] 队列重试 #{retryCount + 1}，{delay}ms 后重发 {entity.Path}");
 
                 await UniTask.Delay(delay, cancellationToken: GFCancellationToken);
                 retryCount++;
@@ -284,7 +289,7 @@ namespace JulyCore.Module.Http
                         _options.RetryBaseDelayMs * Math.Pow(_options.RetryBackoffMultiplier, retryCount),
                         _options.RetryMaxDelayMs);
 
-                    Log($"[HTTP] 补发重试 #{retryCount + 1}，{delay}ms 后重发 {entry.Path}");
+                    LogWarning($"[HTTP] 补发重试 #{retryCount + 1}，{delay}ms 后重发 {entry.Path}");
 
                     await UniTask.Delay(delay, cancellationToken: GFCancellationToken);
                     retryCount++;
@@ -292,8 +297,9 @@ namespace JulyCore.Module.Http
 
                 _pendingData.Entries.RemoveAt(0);
                 await _saveProvider.SaveAsync(_pendingQueueSaveKey, _pendingData);
-                Log($"[HTTP] 补发完成: {entry.Path}，剩余 {_pendingData.Entries.Count} 条");
             }
+
+            Log("[HTTP] 补发全部完成");
         }
 
         #endregion

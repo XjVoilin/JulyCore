@@ -13,8 +13,8 @@ namespace JulyCore.Module.Http
 
         public void RegenerateRequestId() => RequestId = GenerateRequestId();
 
-        private static uint GenerateRequestId()
-            => (uint)DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        private static uint _nextId = unchecked((uint)DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+        private static uint GenerateRequestId() => ++_nextId;
 
         /// <summary>
         /// 是否乐观
