@@ -40,6 +40,9 @@ namespace JulyCore.Core
         // SDK
         Platform = 1 << 18,
         
+        // 调试
+        GM = 1 << 23,
+        
         // 其它
         Scene = 1 << 24,
         Fsm = 1 << 25,
