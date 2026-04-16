@@ -15,7 +15,7 @@ public class UISmartButton : MonoBehaviour,
     [Header("Interact")] [SerializeField] private bool interactable = true;
 
     [Header("Scale Feedback")] public bool enableScale = true;
-    public float scaleTarget = 0.9f;
+    public float scaleTarget = 1.1f;
     public float scaleTime = 0.1f;
     public Ease scaleEase = Ease.Linear;
 
@@ -52,9 +52,11 @@ public class UISmartButton : MonoBehaviour,
         if (!interactable || !enableScale)
             return;
 
-        // 按下时直接设置缩放（立即响应）
         _scaleTweener?.Kill();
-        transform.localScale = _pressedScale;
+        _scaleTweener = transform.DOScale(_pressedScale, scaleTime)
+            .SetEase(scaleEase)
+            .SetUpdate(true)
+            .SetLink(gameObject);
         _targetScale = _pressedScale;
     }
 
@@ -91,6 +93,8 @@ public class UISmartButton : MonoBehaviour,
     #endregion
 
     #region Public API
+
+    public bool IsInteractable => interactable;
 
     public void SetInteractable(bool value)
     {
