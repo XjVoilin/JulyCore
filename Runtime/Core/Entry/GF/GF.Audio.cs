@@ -1,4 +1,3 @@
-using System.Threading;
 using Cysharp.Threading.Tasks;
 using JulyCore.Module.Audio;
 using JulyCore.Provider.Audio;
@@ -51,17 +50,6 @@ namespace JulyCore
             }
 
             /// <summary>
-            /// 播放背景音乐
-            /// </summary>
-            /// <param name="fileName">音频文件名（不含扩展名）</param>
-            /// <param name="options">播放选项，null使用默认选项</param>
-            /// <returns>是否播放成功</returns>
-            public static async UniTask<bool> PlayBGMAsync(string fileName, BGMPlayOptions options = null)
-            {
-                return await Module.PlayBGMAsync(fileName, options);
-            }
-
-            /// <summary>
             /// 停止背景音乐
             /// </summary>
             /// <param name="fadeOutDuration">淡出时长（秒），0表示立即停止</param>
@@ -89,7 +77,6 @@ namespace JulyCore
             /// <summary>
             /// 检查背景音乐是否正在播放
             /// </summary>
-            /// <returns>是否正在播放</returns>
             public static bool IsBGMPlaying()
             {
                 return Module.IsBGMPlaying();
@@ -100,45 +87,45 @@ namespace JulyCore
             #region SFX 操作
 
             /// <summary>
-            /// 播放音效（2D，通过资源文件名，使用配置类）
+            /// 播放音效（2D）
             /// </summary>
             /// <param name="fileName">音频文件名（不含扩展名）</param>
             /// <param name="options">播放选项，null使用默认选项</param>
-            /// <param name="cancellationToken">取消令牌</param>
-            /// <returns>音效播放句柄，可用于停止音效</returns>
-            public static async UniTask<AudioHandle> PlaySFXAsync(string fileName, SfxPlayOptions options = null,
-                CancellationToken cancellationToken = default)
+            public static void PlaySfx(string fileName, SfxPlayOptions options = null)
             {
-                return await Module.PlaySfxAsync(fileName, options, cancellationToken);
+                Module.PlaySfxAsync(fileName, options).Forget();
             }
 
             /// <summary>
-            /// 播放音效（3D空间音效，通过资源文件名，使用配置类）
+            /// 播放音效（3D空间音效）
             /// </summary>
             /// <param name="fileName">音频文件名（不含扩展名）</param>
             /// <param name="options">播放选项，必须指定Position</param>
-            /// <param name="cancellationToken">取消令牌</param>
-            /// <returns>音效播放句柄，可用于停止音效</returns>
-            public static async UniTask<AudioHandle> PlaySFX3DAsync(string fileName, Sfx3DPlayOptions options,
-                CancellationToken cancellationToken = default)
+            public static void PlaySfx3D(string fileName, Sfx3DPlayOptions options)
             {
-                return await Module.PlaySfx3DAsync(fileName, options, cancellationToken);
+                Module.PlaySfx3DAsync(fileName, options).Forget();
             }
 
             /// <summary>
-            /// 停止音效
+            /// 停止音效（通过句柄）
             /// </summary>
-            /// <param name="handle">音效播放句柄</param>
-            /// <param name="fadeOutDuration">淡出时长（秒），0表示立即停止</param>
-            public static void StopSFX(AudioHandle handle)
+            public static void StopSfx(AudioHandle handle)
             {
                 Module.StopSfx(handle);
             }
 
             /// <summary>
+            /// 停止音效（通过文件名）
+            /// </summary>
+            public static void StopSfx(string fileName)
+            {
+                Module.StopSfx(fileName);
+            }
+
+            /// <summary>
             /// 停止所有音效
             /// </summary>
-            public static void StopAllSFX()
+            public static void StopAllSfx()
             {
                 Module.StopAllSfx();
             }
@@ -187,7 +174,7 @@ namespace JulyCore
             /// 设置音效音量
             /// </summary>
             /// <param name="volume">音量（0-1）</param>
-            public static void SetSFXVolume(float volume)
+            public static void SetSfxVolume(float volume)
             {
                 Module.SetSfxVolume(volume);
             }
@@ -196,7 +183,7 @@ namespace JulyCore
             /// 获取音效音量
             /// </summary>
             /// <returns>音量（0-1）</returns>
-            public static float GetSFXVolume()
+            public static float GetSfxVolume()
             {
                 return Module.GetSfxVolume();
             }
@@ -245,7 +232,7 @@ namespace JulyCore
             /// 设置音效静音状态
             /// </summary>
             /// <param name="mute">是否静音</param>
-            public static void SetSFXMute(bool mute)
+            public static void SetSfxMute(bool mute)
             {
                 Module.SetSfxMute(mute);
             }
@@ -254,7 +241,7 @@ namespace JulyCore
             /// 获取音效静音状态
             /// </summary>
             /// <returns>是否静音</returns>
-            public static bool IsSFXMuted()
+            public static bool IsSfxMuted()
             {
                 return Module.IsSfxMuted();
             }

@@ -15,7 +15,7 @@ public class UISmartButton : MonoBehaviour,
     [Header("Interact")] [SerializeField] private bool interactable = true;
 
     [Header("Scale Feedback")] public bool enableScale = true;
-    public float scaleTarget = 1.1f;
+    public float scaleTarget = 1.11f;
     public float scaleTime = 0.1f;
     public Ease scaleEase = Ease.Linear;
 
@@ -153,7 +153,7 @@ public class UISmartButton : MonoBehaviour,
         if (!enableSound) return;
         var sfx = !string.IsNullOrEmpty(clickSfx) ? clickSfx : GF.Audio.DefaultClickSfx;
         if (!string.IsNullOrEmpty(sfx))
-            GF.Audio.PlaySFXAsync(sfx).Forget();
+            GF.Audio.PlaySfx(sfx);
     }
 
     #endregion

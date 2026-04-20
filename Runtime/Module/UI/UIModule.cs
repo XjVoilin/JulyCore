@@ -106,7 +106,7 @@ namespace JulyCore.Module.UI
             Close(identifier);
         }
 
-        internal void Close(WindowIdentifier identifier, bool destroy = true)
+        internal void Close(WindowIdentifier identifier, bool destroy = true, UIAnimationType? animationType = null)
         {
             EnsureProvider();
 
@@ -116,18 +116,18 @@ namespace JulyCore.Module.UI
             _idToIdentifier.Remove(identifier.ID);
             _openedUILayers.Remove(identifier);
 
-            _uiProvider.Close(identifier);
+            _uiProvider.Close(identifier, destroy, animationType);
             PublishCloseEvent(identifier, layer);
         }
 
-        internal void Close(UIBase ui, bool destroy = true)
+        internal void Close(UIBase ui, bool destroy = true, UIAnimationType? animationType = null)
         {
             if (ui == null) return;
 
             var identifier = FindIdentifierByInstanceId(ui.GetInstanceID());
             if (identifier != null)
             {
-                Close(identifier);
+                Close(identifier, destroy, animationType);
             }
             else
             {

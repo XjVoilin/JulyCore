@@ -125,7 +125,7 @@ namespace JulyCore.Provider.UI
         /// </summary>
         /// <param name="identifier">窗口标识符</param>
         /// <param name="destroy">是否销毁（false则隐藏）</param>
-        void Close(WindowIdentifier identifier, bool destroy = false);
+        void Close(WindowIdentifier identifier, bool destroy = false, UIAnimationType? animationType = null);
 
         /// <summary>
         /// 关闭UI（通过WindowIdentifier，异步版本，等待动画完成）

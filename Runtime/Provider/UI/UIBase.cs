@@ -1,6 +1,7 @@
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using JulyCore.Core;
+using JulyCore.Data.UI;
 using UnityEngine;
 
 namespace JulyCore.Provider.UI
@@ -104,10 +105,11 @@ namespace JulyCore.Provider.UI
         /// <summary>
         /// 关闭并销毁当前窗口
         /// </summary>
-        protected void CloseWindow()
+        /// <param name="animationType">关闭动画类型覆盖，null 则走配置</param>
+        protected void CloseWindow(UIAnimationType? animationType = null)
         {
             if (!IsOpened) return;
-            GF.UI.Close(this, true);
+            GF.UI.Close(this, true, animationType);
         }
 
         /// <summary>

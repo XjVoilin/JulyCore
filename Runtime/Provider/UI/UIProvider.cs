@@ -274,14 +274,14 @@ namespace JulyCore.Provider.UI
         /// <summary>
         /// 关闭并销毁UI（通过WindowIdentifier，同步版本）
         /// </summary>
-        public void Close(WindowIdentifier identifier, bool destroy = true)
+        public void Close(WindowIdentifier identifier, bool destroy = true, UIAnimationType? animationType = null)
         {
             if (identifier == null)
             {
                 throw new ArgumentNullException(nameof(identifier));
             }
 
-            CloseInternal(identifier, GetCloseAnimationType(identifier));
+            CloseInternal(identifier, animationType ?? GetCloseAnimationType(identifier));
         }
 
         /// <summary>

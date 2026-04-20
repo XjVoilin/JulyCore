@@ -105,6 +105,7 @@ namespace JulyCore.Module.Audio
 
         // SFX相关业务状态
         private readonly Dictionary<AudioHandle, SfxInfo> _activeSfxHandles = new Dictionary<AudioHandle, SfxInfo>();
+        private readonly Dictionary<string, AudioHandle> _nameToSfxHandle = new Dictionary<string, AudioHandle>();
         private float _sfxVolume = 1f;
         private bool _sfxMute = false;
 
@@ -281,12 +282,10 @@ namespace JulyCore.Module.Audio
         #region 音效（SFX）
 
         /// <summary>
-        /// 播放音效（2D，通过资源文件名）
+        /// 播放音效（2D）
         /// </summary>
-        internal async UniTask<AudioHandle> PlaySfxAsync(string fileName, SfxPlayOptions options = null,
-            CancellationToken cancellationToken = default)
+        internal async UniTask PlaySfxAsync(string fileName, SfxPlayOptions options = null)
         {
-            // 构建技术参数
             var techOptions = new AudioPlayOptions
             {
                 Volume = CalculateSfxVolume(options?.Volume),
@@ -297,39 +296,26 @@ namespace JulyCore.Module.Audio
                 Loop = false
             };
 
-            // 通过Provider加载并播放
-            var handle = await _audioProvider.PlayAudioAsync(fileName, techOptions, cancellationToken);
+            var handle = await _audioProvider.PlayAudioAsync(fileName, techOptions);
             if (handle == null)
             {
                 LogWarning($"[{Name}] 播放SFX失败: {fileName}");
-                return null;
+                return;
             }
 
-            // 记录业务信息
-            _activeSfxHandles[handle] = new SfxInfo
-            {
-                Group = options?.Group,
-                BaseVolume = techOptions.Volume
-            };
-
-            if (_masterMute || _sfxMute)
-                _audioProvider.SetMute(handle, true);
-
-            return handle;
+            RegisterSfxHandle(fileName, handle, options?.Group, techOptions.Volume);
         }
 
         /// <summary>
-        /// 播放音效（3D空间音效，通过资源文件名）
+        /// 播放音效（3D空间音效）
         /// </summary>
-        internal async UniTask<AudioHandle> PlaySfx3DAsync(string fileName, Sfx3DPlayOptions options,
-            CancellationToken cancellationToken = default)
+        internal async UniTask PlaySfx3DAsync(string fileName, Sfx3DPlayOptions options)
         {
             if (options == null)
             {
                 throw new ArgumentNullException(nameof(options), "Sfx3DPlayOptions不能为null，必须指定Position");
             }
 
-            // 构建技术参数
             var techOptions = new AudioPlayOptions
             {
                 Volume = CalculateSfxVolume(options.Volume),
@@ -343,39 +329,62 @@ namespace JulyCore.Module.Audio
                 MaxDistance = options.MaxDistance
             };
 
-            // 通过Provider加载并播放
-            var handle = await _audioProvider.PlayAudioAsync(fileName, techOptions, cancellationToken);
+            var handle = await _audioProvider.PlayAudioAsync(fileName, techOptions);
             if (handle == null)
             {
                 LogWarning($"[{Name}] 播放SFX3D失败: {fileName}");
-                return null;
+                return;
             }
 
-            // 记录业务信息
+            RegisterSfxHandle(fileName, handle, options.Group, techOptions.Volume);
+        }
+
+        private void RegisterSfxHandle(string fileName, AudioHandle handle, string group, float baseVolume)
+        {
+            if (_nameToSfxHandle.TryGetValue(fileName, out var prev) && prev.IsValid)
+            {
+                _audioProvider.StopAudio(prev);
+                _activeSfxHandles.Remove(prev);
+            }
+
+            _nameToSfxHandle[fileName] = handle;
             _activeSfxHandles[handle] = new SfxInfo
             {
-                Group = options.Group,
-                BaseVolume = techOptions.Volume
+                Group = group,
+                BaseVolume = baseVolume
             };
 
             if (_masterMute || _sfxMute)
                 _audioProvider.SetMute(handle, true);
-
-            return handle;
         }
 
         /// <summary>
-        /// 停止音效
+        /// 停止音效（通过句柄）
         /// </summary>
         internal void StopSfx(AudioHandle handle)
         {
-            if (handle == null)
-            {
-                return;
-            }
+            if (handle == null) return;
 
             _audioProvider.StopAudio(handle);
             _activeSfxHandles.Remove(handle);
+        }
+
+        /// <summary>
+        /// 停止音效（通过文件名）
+        /// </summary>
+        internal void StopSfx(string fileName)
+        {
+            if (string.IsNullOrEmpty(fileName)) return;
+
+            if (_nameToSfxHandle.TryGetValue(fileName, out var handle))
+            {
+                _nameToSfxHandle.Remove(fileName);
+                if (handle != null && handle.IsValid)
+                {
+                    _audioProvider.StopAudio(handle);
+                    _activeSfxHandles.Remove(handle);
+                }
+            }
         }
 
         /// <summary>
@@ -393,6 +402,7 @@ namespace JulyCore.Module.Audio
             }
 
             _activeSfxHandles.Clear();
+            _nameToSfxHandle.Clear();
         }
 
         /// <summary>
@@ -400,10 +410,7 @@ namespace JulyCore.Module.Audio
         /// </summary>
         internal void StopSfxByGroup(string group)
         {
-            if (string.IsNullOrEmpty(group))
-            {
-                return;
-            }
+            if (string.IsNullOrEmpty(group)) return;
 
             var handlesToStop = new List<AudioHandle>();
             foreach (var kvp in _activeSfxHandles)
@@ -639,6 +646,7 @@ namespace JulyCore.Module.Audio
             _audioProvider = null;
             _currentBgmHandle = null;
             _activeSfxHandles.Clear();
+            _nameToSfxHandle.Clear();
             _invalidHandleList.Clear();
 
             Log($"[{Name}] 音效模块已关闭");

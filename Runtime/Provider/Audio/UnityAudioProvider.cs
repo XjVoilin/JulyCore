@@ -91,7 +91,6 @@ namespace JulyCore.Provider.Audio
                 return null;
             }
 
-            // 通过资源提供者加载音频
             var audioClip = await _resourceProvider.LoadAsync<AudioClip>(fileName, cancellationToken);
             if (audioClip == null)
             {
@@ -99,59 +98,46 @@ namespace JulyCore.Provider.Audio
                 return null;
             }
 
-            // 播放音频
-            return PlayAudio(audioClip, options);
-        }
-
-        private AudioHandle PlayAudio(AudioClip audioClip, AudioPlayOptions options = null)
-        {
-            if (audioClip == null)
+            try
             {
-                LogWarning($"[{Name}] AudioClip不能为null");
+                var audioSource = _audioSourcePool.Get();
+
+                options ??= new AudioPlayOptions();
+                ApplyOptionsToAudioSource(audioSource, options);
+                audioSource.clip = audioClip;
+
+                var handle = new AudioHandle
+                {
+                    AudioClip = audioClip,
+                    AudioIdentifier = fileName,
+                    AudioSource = audioSource,
+                    Priority = options.Priority,
+                    BaseVolume = options.Volume,
+                    ExpectedEndTime = CalculateExpectedEndTime(audioClip, options),
+                    IsPaused = false
+                };
+
+                _activeHandles.Add(handle);
+
+                if (options.Delay > 0f)
+                    audioSource.PlayDelayed(options.Delay);
+                else
+                    audioSource.Play();
+
+                if (options.FadeInDuration > 0f)
+                {
+                    audioSource.volume = 0f;
+                    StartFadeIn(handle, options.FadeInDuration, options.Delay);
+                }
+
+                return handle;
+            }
+            catch (Exception ex)
+            {
+                _resourceProvider.Unload(audioClip);
+                LogWarning($"[{Name}] 播放音频失败: {fileName}, {ex.Message}");
                 return null;
             }
-
-            // 获取或创建 AudioSource
-            var audioSource = _audioSourcePool.Get();
-
-            // 应用选项
-            options ??= new AudioPlayOptions();
-            ApplyOptionsToAudioSource(audioSource, options);
-
-            // 设置 AudioClip
-            audioSource.clip = audioClip;
-
-            // 创建 Handle
-            var handle = new AudioHandle
-            {
-                AudioClip = audioClip,
-                AudioIdentifier = audioClip.name,
-                AudioSource = audioSource,
-                Priority = options.Priority,
-                BaseVolume = options.Volume,
-                ExpectedEndTime = CalculateExpectedEndTime(audioClip, options),
-                IsPaused = false
-            };
-
-            // 记录 Handle
-            _activeHandles.Add(handle);
-
-            if (options.Delay > 0f)
-            {
-                audioSource.PlayDelayed(options.Delay);
-            }
-            else
-            {
-                audioSource.Play();
-            }
-
-            if (options.FadeInDuration > 0f)
-            {
-                audioSource.volume = 0f;
-                StartFadeIn(handle, options.FadeInDuration, options.Delay);
-            }
-
-            return handle;
         }
 
         public void StopAudio(AudioHandle handle, float fadeOutDuration = 0f)
@@ -540,6 +526,10 @@ namespace JulyCore.Provider.Audio
 
                 _activeHandles.Remove(handle);
             }
+
+            // 释放 AudioClip 资源引用
+            if (_resourceProvider != null && handle.AudioClip != null)
+                _resourceProvider.Unload(handle.AudioClip);
         }
 
         #endregion

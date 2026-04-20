@@ -202,9 +202,10 @@ namespace JulyCore
             /// </summary>
             /// <param name="ui">UI实例</param>
             /// <param name="destroy">是否销毁（false则隐藏，可再次显示）</param>
-            public static void Close(UIBase ui, bool destroy = false)
+            /// <param name="animationType">关闭动画类型覆盖，null 则走配置</param>
+            public static void Close(UIBase ui, bool destroy = false, UIAnimationType? animationType = null)
             {
-                Module.Close(ui, destroy);
+                Module.Close(ui, destroy, animationType);
             }
 
             /// <summary>
