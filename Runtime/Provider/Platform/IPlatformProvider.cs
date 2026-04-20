@@ -1,4 +1,3 @@
-using Cysharp.Threading.Tasks;
 using JulyCore.Core;
 using UnityEngine;
 
@@ -8,8 +7,6 @@ namespace JulyCore.Provider.Platform
     {
         int PlatformType { get; }
         T GetService<T>() where T : class;
-        void EarlyBoot() { }
-        UniTask ColdLaunchAsync() => UniTask.CompletedTask;
         Rect GetSafeArea() => Screen.safeArea;
     }
 }

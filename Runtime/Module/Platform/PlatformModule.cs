@@ -11,7 +11,7 @@ namespace JulyCore.Module.Platform
 
         protected override LogChannel LogChannel => LogChannel.Platform;
         public override int Priority => Frameworkconst.PriorityPlatformModule;
-        
+
         public int PlatformType => _provider.PlatformType;
 
         protected override UniTask OnInitAsync()
@@ -23,16 +23,6 @@ namespace JulyCore.Module.Platform
         public T GetService<T>() where T : class
         {
             return _provider.GetService<T>();
-        }
-
-        public UnityEngine.Rect GetSafeArea()
-        {
-            return _provider.GetSafeArea();
-        }
-
-        public UniTask ColdLaunchAsync()
-        {
-            return _provider.ColdLaunchAsync();
         }
     }
 }

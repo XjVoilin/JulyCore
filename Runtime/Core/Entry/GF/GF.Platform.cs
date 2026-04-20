@@ -1,4 +1,3 @@
-using Cysharp.Threading.Tasks;
 using JulyCore.Module.Platform;
 
 namespace JulyCore
@@ -17,22 +16,12 @@ namespace JulyCore
                     return _module;
                 }
             }
-            
+
             public static int PlatformType => Module.PlatformType;
 
             public static T GetService<T>() where T : class
             {
                 return Module.GetService<T>();
-            }
-
-            public static UnityEngine.Rect GetSafeArea()
-            {
-                return Module.GetSafeArea();
-            }
-
-            public static UniTask ColdLaunchAsync()
-            {
-                return Module.ColdLaunchAsync();
             }
         }
     }
