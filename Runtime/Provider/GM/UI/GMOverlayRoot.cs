@@ -1,5 +1,6 @@
 #if JULYGF_DEBUG
 using System.Collections.Generic;
+using JulyCore.Provider.UI;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -27,15 +28,32 @@ namespace JulyCore.Provider.GM
 
             var root = go.AddComponent<GMOverlayRoot>();
 
-            var panel = go.AddComponent<GMIMGUIPanel>();
-            panel.Init(categories);
+            var safeArea = CreateSafeArea(go.transform);
 
-            // ball first, then blocker on top — blocker blocks ball clicks when panel is open
-            GMFloatingBall.Create(go.transform, () => panel.Show());
-            var blocker = CreateBlocker(go.transform);
+            var panel = GMUGUIPanel.Create(safeArea, categories);
+            GMFloatingBall.Create(safeArea, () => panel.Show());
+            var blocker = CreateBlocker(safeArea);
             panel.Blocker = blocker;
 
+            panel.transform.SetAsLastSibling();
+
             return root;
+        }
+
+        private static Transform CreateSafeArea(Transform parent)
+        {
+            var go = new GameObject("SafeArea", typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+
+            var rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+
+            go.AddComponent<SafeAreaAdapter>();
+
+            return go.transform;
         }
 
         private static GameObject CreateBlocker(Transform parent)
