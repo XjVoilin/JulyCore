@@ -27,15 +27,14 @@ namespace JulyCore.Provider.GM
             EnsureEventSystem();
 
             var root = go.AddComponent<GMOverlayRoot>();
+            var canvasTransform = go.transform;
 
-            var safeArea = CreateSafeArea(go.transform);
-
-            var panel = GMUGUIPanel.Create(safeArea, categories);
-            GMFloatingBall.Create(safeArea, () => panel.Show());
-            var blocker = CreateBlocker(safeArea);
+            var safeArea = CreateSafeArea(canvasTransform);
+            var blocker = CreateBlocker(canvasTransform);
+            var panel = GMUGUIPanel.Create(canvasTransform, categories);
             panel.Blocker = blocker;
 
-            panel.transform.SetAsLastSibling();
+            GMFloatingBall.Create(safeArea, () => panel.Show());
 
             return root;
         }

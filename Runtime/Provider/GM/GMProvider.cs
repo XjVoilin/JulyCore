@@ -17,8 +17,10 @@ namespace JulyCore.Provider.GM
             _registry.Register(type);
         }
 
-        public void Build()
+        public void Build(TMPro.TMP_FontAsset font = null)
         {
+            if (font != null) GMUGUIPanel.OverrideFont = font;
+            if (_overlayRoot != null) return;
             _overlayRoot = GMOverlayRoot.Create(_registry.Categories);
         }
 

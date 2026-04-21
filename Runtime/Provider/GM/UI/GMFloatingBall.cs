@@ -1,5 +1,6 @@
 #if JULYGF_DEBUG
 using System;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -64,7 +65,6 @@ namespace JulyCore.Provider.GM
             hlRt.offsetMax = new Vector2(-6, -6);
             highlight.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.08f);
 
-            // "GM" text
             var textGo = new GameObject("Text", typeof(RectTransform));
             textGo.transform.SetParent(outer.transform, false);
             var textRt = textGo.GetComponent<RectTransform>();
@@ -73,18 +73,14 @@ namespace JulyCore.Provider.GM
             textRt.offsetMin = Vector2.zero;
             textRt.offsetMax = Vector2.zero;
 
-            var text = textGo.AddComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var text = textGo.AddComponent<TextMeshProUGUI>();
+            if (GMUGUIPanel.OverrideFont != null)
+                text.font = GMUGUIPanel.OverrideFont;
             text.fontSize = 38;
-            text.fontStyle = FontStyle.Bold;
+            text.fontStyle = FontStyles.Normal;
             text.color = new Color32(140, 200, 255, 255);
-            text.alignment = TextAnchor.MiddleCenter;
+            text.alignment = TextAlignmentOptions.Center;
             text.text = "GM";
-
-            // text shadow
-            var textShadow = textGo.AddComponent<Shadow>();
-            textShadow.effectColor = new Color(0, 0, 0, 0.6f);
-            textShadow.effectDistance = new Vector2(2, -2);
         }
 
         private static GameObject CreateLayer(Transform parent, string name, Vector2 offset, Vector2 size)

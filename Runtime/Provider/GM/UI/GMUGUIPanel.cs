@@ -1,6 +1,7 @@
 #if JULYGF_DEBUG
 using System;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -33,8 +34,21 @@ namespace JulyCore.Provider.GM
 
         #endregion
 
+        static TMP_FontAsset s_overrideFont;
+        static GMUGUIPanel s_instance;
+
+        public static TMP_FontAsset OverrideFont
+        {
+            get => s_overrideFont;
+            set
+            {
+                s_overrideFont = value;
+                if (value != null) s_instance?.ApplyFont(value);
+            }
+        }
+
         IReadOnlyList<GMCategoryInfo> _categories;
-        Font _font;
+        TMP_FontAsset _font;
         int _activeTab;
         ScrollRect _scroll;
         readonly List<TabSlot> _tabs = new();
@@ -46,7 +60,7 @@ namespace JulyCore.Provider.GM
         struct TabSlot
         {
             public Image Bg;
-            public Text Label;
+            public TextMeshProUGUI Label;
         }
 
         #region Public API
@@ -60,6 +74,7 @@ namespace JulyCore.Provider.GM
             panel._categories = categories;
             panel.Build();
             rt.gameObject.SetActive(false);
+            s_instance = panel;
             return panel;
         }
 
@@ -75,12 +90,20 @@ namespace JulyCore.Provider.GM
             if (Blocker) Blocker.SetActive(false);
         }
 
+        void ApplyFont(TMP_FontAsset font)
+        {
+            _font = font;
+            foreach (var t in GetComponentsInChildren<TextMeshProUGUI>(true))
+                t.font = font;
+        }
+
         #endregion
 
         #region Build
 
-        static readonly ColorBlock s_tint = MakeTint();
-        Font CachedFont => _font ??= Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        TMP_FontAsset CachedFont => _font ??= OverrideFont != null
+            ? OverrideFont
+            : TMP_Settings.defaultFontAsset;
 
         void Build()
         {
@@ -105,29 +128,27 @@ namespace JulyCore.Provider.GM
             var hdr = TopStrip(NewRT("Header", root), 0, h);
             Img(hdr.gameObject, s_header);
 
+            var crt = NewRT("Close", hdr);
+            crt.anchorMin = Vector2.zero;
+            crt.anchorMax = new Vector2(0, 1);
+            crt.pivot = new Vector2(0, 0.5f);
+            crt.offsetMin = new Vector2(10, 10);
+            crt.offsetMax = new Vector2(h, -10);
+            Img(crt.gameObject, s_close);
+            var cBtn = AddSmartButton(crt.gameObject);
+            cBtn.onClick.AddListener(Hide);
+
+            var xTxt = Txt(NewRT("X", crt), "X", 38, Color.white, FontStyles.Bold);
+            Stretch(xTxt.rectTransform);
+            xTxt.alignment = TextAlignmentOptions.Center;
+
             var trt = NewRT("Title", hdr);
             trt.anchorMin = Vector2.zero;
             trt.anchorMax = Vector2.one;
-            trt.offsetMin = new Vector2(28, 0);
-            trt.offsetMax = new Vector2(-(h + 8), 0);
-            var title = Txt(trt, "GM Console", 42, s_text, FontStyle.Bold);
-            title.alignment = TextAnchor.MiddleLeft;
-
-            var crt = NewRT("Close", hdr);
-            crt.anchorMin = new Vector2(1, 0);
-            crt.anchorMax = Vector2.one;
-            crt.pivot = new Vector2(1, 0.5f);
-            crt.offsetMin = new Vector2(-h, 10);
-            crt.offsetMax = new Vector2(-10, -10);
-            var cImg = Img(crt.gameObject, s_close);
-            var cBtn = crt.gameObject.AddComponent<Button>();
-            cBtn.targetGraphic = cImg;
-            cBtn.colors = s_tint;
-            cBtn.onClick.AddListener(Hide);
-
-            var xTxt = Txt(NewRT("X", crt), "\u2715", 38, Color.white, FontStyle.Bold);
-            Stretch(xTxt.rectTransform);
-            xTxt.alignment = TextAnchor.MiddleCenter;
+            trt.offsetMin = new Vector2(h, 0);
+            trt.offsetMax = new Vector2(-h, 0);
+            var title = Txt(trt, "GM Console", 42, s_text);
+            title.alignment = TextAlignmentOptions.Center;
         }
 
         void BuildTabBar(RectTransform root, float top, float h)
@@ -170,14 +191,12 @@ namespace JulyCore.Provider.GM
                 var tabImg = Img(tab.gameObject, s_tabN);
                 var tabTxt = Txt(NewRT("L", tab), _categories[i].Category, 32, s_dim);
                 Stretch(tabTxt.rectTransform);
-                tabTxt.alignment = TextAnchor.MiddleCenter;
+                tabTxt.alignment = TextAlignmentOptions.Center;
 
                 le.preferredWidth = Mathf.Max(100, tabTxt.preferredWidth + 48);
                 le.preferredHeight = h - 12;
 
-                var btn = tab.gameObject.AddComponent<Button>();
-                btn.targetGraphic = tabImg;
-                btn.transition = Selectable.Transition.None;
+                var btn = AddSmartButton(tab.gameObject, enableScale: false);
                 btn.onClick.AddListener(() => SelectTab(idx));
 
                 _tabs.Add(new TabSlot { Bg = tabImg, Label = tabTxt });
@@ -242,7 +261,7 @@ namespace JulyCore.Provider.GM
 
             var nrt = NewRT("Name", card);
             nrt.gameObject.AddComponent<LayoutElement>().preferredHeight = 52;
-            Txt(nrt, cmd.DisplayName, 34, s_accent, FontStyle.Bold);
+            Txt(nrt, cmd.DisplayName, 34, s_accent);
 
             Func<object>[] bindings = Array.Empty<Func<object>>();
 
@@ -270,15 +289,13 @@ namespace JulyCore.Provider.GM
             var ble = brt.gameObject.AddComponent<LayoutElement>();
             ble.preferredWidth = 150;
             ble.preferredHeight = 56;
-            var bImg = Img(brt.gameObject, s_run);
-            var bBtn = brt.gameObject.AddComponent<Button>();
-            bBtn.targetGraphic = bImg;
-            bBtn.colors = s_tint;
+            Img(brt.gameObject, s_run);
+            var bBtn = AddSmartButton(brt.gameObject);
             bBtn.onClick.AddListener(() => Exec(cmd, bindings));
 
-            var bTxt = Txt(NewRT("L", brt), "\u6267\u884c", 32, Color.white, FontStyle.Bold);
+            var bTxt = Txt(NewRT("L", brt), "\u6267\u884c", 32, Color.white);
             Stretch(bTxt.rectTransform);
-            bTxt.alignment = TextAnchor.MiddleCenter;
+            bTxt.alignment = TextAlignmentOptions.Center;
         }
 
         #endregion
@@ -320,22 +337,22 @@ namespace JulyCore.Provider.GM
 
             var txt = Txt(area, "", 32, s_text);
             Stretch(txt.rectTransform);
-            txt.supportRichText = false;
+            txt.richText = false;
 
             var ph = Txt(NewRT("PH", area), "...", 32,
-                new Color(s_dim.r, s_dim.g, s_dim.b, 0.5f));
+                new Color(s_dim.r, s_dim.g, s_dim.b, 0.5f), FontStyles.Italic);
             Stretch(ph.rectTransform);
-            ph.fontStyle = FontStyle.Italic;
 
-            var inp = rt.gameObject.AddComponent<InputField>();
+            var inp = rt.gameObject.AddComponent<TMP_InputField>();
             inp.textComponent = txt;
             inp.placeholder = ph;
             inp.text = p.DefaultValue?.ToString() ?? "";
+            inp.fontAsset = CachedFont;
 
             if (p.ParamType == typeof(int))
-                inp.contentType = InputField.ContentType.IntegerNumber;
+                inp.contentType = TMP_InputField.ContentType.IntegerNumber;
             else if (p.ParamType == typeof(float))
-                inp.contentType = InputField.ContentType.DecimalNumber;
+                inp.contentType = TMP_InputField.ContentType.DecimalNumber;
 
             return () => ParseInput(p, inp.text);
         }
@@ -349,13 +366,11 @@ namespace JulyCore.Provider.GM
             var img = Img(rt.gameObject, init ? s_accent : s_input);
 
             var lbl = Txt(NewRT("L", rt), init ? "ON" : "OFF", 32,
-                init ? Color.white : s_dim, FontStyle.Bold);
+                init ? Color.white : s_dim);
             Stretch(lbl.rectTransform);
-            lbl.alignment = TextAnchor.MiddleCenter;
+            lbl.alignment = TextAlignmentOptions.Center;
 
-            var btn = rt.gameObject.AddComponent<Button>();
-            btn.targetGraphic = img;
-            btn.transition = Selectable.Transition.None;
+            var btn = AddSmartButton(rt.gameObject, enableScale: false);
             btn.onClick.AddListener(() =>
             {
                 state[0] = !state[0];
@@ -372,7 +387,7 @@ namespace JulyCore.Provider.GM
             var names = Enum.GetNames(p.ParamType);
             var sel = new[] { Mathf.Max(0, Array.IndexOf(names, p.DefaultValue?.ToString())) };
             var imgs = new List<Image>();
-            var txts = new List<Text>();
+            var txts = new List<TextMeshProUGUI>();
 
             var rt = NewRT("Enum", parent);
             rt.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
@@ -390,14 +405,12 @@ namespace JulyCore.Provider.GM
                 var oTxt = Txt(NewRT("L", ort), names[i], 28,
                     i == sel[0] ? Color.white : s_dim);
                 Stretch(oTxt.rectTransform);
-                oTxt.alignment = TextAnchor.MiddleCenter;
+                oTxt.alignment = TextAlignmentOptions.Center;
 
                 imgs.Add(oImg);
                 txts.Add(oTxt);
 
-                var ob = ort.gameObject.AddComponent<Button>();
-                ob.targetGraphic = oImg;
-                ob.transition = Selectable.Transition.None;
+                var ob = AddSmartButton(ort.gameObject, enableScale: false);
                 ob.onClick.AddListener(() =>
                 {
                     sel[0] = idx;
@@ -500,30 +513,28 @@ namespace JulyCore.Provider.GM
             return img;
         }
 
-        Text Txt(RectTransform rt, string text, int size, Color c,
-            FontStyle style = FontStyle.Normal)
+        TextMeshProUGUI Txt(RectTransform rt, string text, float size, Color c,
+            FontStyles style = FontStyles.Normal)
         {
-            var t = rt.gameObject.AddComponent<Text>();
+            var t = rt.gameObject.AddComponent<TextMeshProUGUI>();
             t.font = CachedFont;
             t.fontSize = size;
             t.color = c;
             t.fontStyle = style;
             t.text = text;
-            t.alignment = TextAnchor.MiddleLeft;
-            t.horizontalOverflow = HorizontalWrapMode.Overflow;
-            t.verticalOverflow = VerticalWrapMode.Overflow;
+            t.alignment = TextAlignmentOptions.MidlineLeft;
+            t.overflowMode = TextOverflowModes.Overflow;
+            t.enableWordWrapping = false;
             return t;
         }
 
-        static ColorBlock MakeTint(float hi = 1.15f, float lo = 0.85f)
+        static UISmartButton AddSmartButton(GameObject go, bool enableScale = true)
         {
-            var cb = ColorBlock.defaultColorBlock;
-            cb.normalColor = Color.white;
-            cb.highlightedColor = new Color(hi, hi, hi, 1);
-            cb.pressedColor = new Color(lo, lo, lo, 1);
-            cb.selectedColor = Color.white;
-            cb.fadeDuration = 0.08f;
-            return cb;
+            var btn = go.AddComponent<UISmartButton>();
+            btn.enableScale = enableScale;
+            btn.enableSound = false;
+            btn.enableCooldown = false;
+            return btn;
         }
 
         #endregion
