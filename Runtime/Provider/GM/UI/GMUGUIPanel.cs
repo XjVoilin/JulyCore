@@ -61,6 +61,7 @@ namespace JulyCore.Provider.GM
         {
             public Image Bg;
             public TextMeshProUGUI Label;
+            public LayoutElement Layout;
         }
 
         #region Public API
@@ -93,8 +94,20 @@ namespace JulyCore.Provider.GM
         void ApplyFont(TMP_FontAsset font)
         {
             _font = font;
-            foreach (var t in GetComponentsInChildren<TextMeshProUGUI>(true))
+            var root = transform.root;
+            foreach (var t in root.GetComponentsInChildren<TextMeshProUGUI>(true))
                 t.font = font;
+            RefreshTabWidths();
+        }
+
+        void RefreshTabWidths()
+        {
+            for (int i = 0; i < _tabs.Count; i++)
+            {
+                var label = _tabs[i].Label;
+                label.ForceMeshUpdate();
+                _tabs[i].Layout.preferredWidth = Mathf.Max(100, label.preferredWidth + 48);
+            }
         }
 
         #endregion
@@ -199,7 +212,7 @@ namespace JulyCore.Provider.GM
                 var btn = AddSmartButton(tab.gameObject, enableScale: false);
                 btn.onClick.AddListener(() => SelectTab(idx));
 
-                _tabs.Add(new TabSlot { Bg = tabImg, Label = tabTxt });
+                _tabs.Add(new TabSlot { Bg = tabImg, Label = tabTxt, Layout = le });
             }
         }
 
