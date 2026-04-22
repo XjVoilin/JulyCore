@@ -1,4 +1,5 @@
 using JulyCore.Module.Platform;
+using JulyCore.Provider.Platform;
 
 namespace JulyCore
 {
@@ -18,6 +19,7 @@ namespace JulyCore
             }
 
             public static int PlatformType => Module.PlatformType;
+            public static IPlatformRoute Route => Module.Route;
 
             public static T GetService<T>() where T : class
             {
