@@ -96,7 +96,7 @@ public class UISmartButton : MonoBehaviour,
 
     public bool IsInteractable => interactable;
 
-    public void SetInteractable(bool value)
+    public virtual void SetInteractable(bool value)
     {
         if (interactable == value)
             return;
