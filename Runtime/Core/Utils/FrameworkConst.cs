@@ -19,6 +19,7 @@ namespace JulyCore.Core
         public const int PriorityHotUpdateModule = 1;   // 热更新模块（必须最先初始化）
         public const int PriorityResourceModule = 3;    // 资源模块（需较早初始化，其他模块可能依赖）
         public const int PriorityConfigModule = 5;
+        public const int PriorityInputModule = 7;          // 输入模块（应尽早可用）
         public const int PriorityTimeModule = 8;           // 时间模块（定时器需要尽早初始化）
         public const int PriorityLocalizationModule = 9;   // 多语言模块（UI等模块可能依赖）
         public const int PrioritySerializeModule = 10;
@@ -45,6 +46,7 @@ namespace JulyCore.Core
         public const int PrioritySerializeProvider = 10;      // 序列化（最基础）
         public const int PriorityEncryptionProvider = 11;     // 加密（可能被其他 Provider 使用）
         public const int PriorityTimeProvider = 12;           // 时间
+        public const int PriorityInputProvider = 13;          // 输入
         
         // 资源层
         public const int PriorityResourceProvider = 20;       // 资源加载（UI、Audio 等依赖）

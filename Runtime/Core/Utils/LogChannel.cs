@@ -40,6 +40,9 @@ namespace JulyCore.Core
         // SDK
         Platform = 1 << 18,
         
+        // 输入
+        Input = 1 << 19,
+        
         // 调试
         GM = 1 << 23,
         
