@@ -10,6 +10,11 @@ namespace JulyCore.Provider.Analytics
     public interface IAnalyticsProvider : IProvider
     {
         /// <summary>
+        /// 延迟初始化 SDK，由外部在首场景渲染后主动调用。
+        /// </summary>
+        void DeferredInit() { }
+
+        /// <summary>
         /// 上报事件
         /// </summary>
         /// <param name="eventName">事件名称</param>

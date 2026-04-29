@@ -33,6 +33,12 @@ namespace JulyCore.Module.Analytics
 
         protected override void OnUpdate(float elapseSeconds, float realElapseSeconds) { }
 
+        internal void DeferredInit()
+        {
+            EnsureProvider();
+            _analyticsProvider.DeferredInit();
+        }
+
         internal void Track(string eventName, Dictionary<string, object> parameters = null)
         {
             if (!_isEnabled) return;
