@@ -61,11 +61,10 @@ namespace JulyCore.Provider.UI
         /// <summary>
         /// UI关闭时调用（在播放关闭动画之前）
         /// </summary>
-        internal void Close()
+        public virtual void Close()
         {
             if (!IsOpened) return;
             IsOpened = false;
-            GF.Event.UnsubscribeAll(this);
             OnClose();
         }
 

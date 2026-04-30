@@ -112,20 +112,7 @@ namespace JulyCore.Module.Localization
                 }
             }
 
-            // 更新业务状态
-            var oldLanguage = _currentLanguage;
             _currentLanguage = languageCode;
-
-            // 发布业务事件
-            try
-            {
-                var e = new LanguageChangedEvent(oldLanguage, _currentLanguage);
-                EventBus.Publish(e);
-            }
-            catch (Exception ex)
-            {
-                LogError($"[{Name}] 语言变更事件处理异常: {ex.Message}");
-            }
 
             return true;
         }

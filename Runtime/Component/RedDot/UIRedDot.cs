@@ -44,11 +44,6 @@ public sealed class UIRedDot : MonoBehaviour
         Refresh();
     }
 
-    private void OnDisable()
-    {
-        GF.Event.UnsubscribeAll(this);
-    }
-
     #endregion
 
     #region 公开方法
