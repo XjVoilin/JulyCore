@@ -25,6 +25,11 @@ namespace JulyCore
             {
                 return Module.GetService<T>();
             }
+
+            public static void DeferAllServices()
+            {
+                Module.DeferAllServices();
+            }
         }
     }
 }

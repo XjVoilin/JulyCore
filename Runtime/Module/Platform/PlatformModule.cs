@@ -26,5 +26,10 @@ namespace JulyCore.Module.Platform
         {
             return _provider.GetService<T>();
         }
+
+        public void DeferAllServices()
+        {
+            _provider.DeferAllServices();
+        }
     }
 }

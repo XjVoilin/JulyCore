@@ -8,5 +8,6 @@ namespace JulyCore.Provider.Platform
         int PlatformType { get; }
         T GetService<T>() where T : class;
         Rect GetSafeArea() => Screen.safeArea;
+        void DeferAllServices() { }
     }
 }
