@@ -37,5 +37,10 @@ namespace JulyCore.Provider.Analytics
         /// 立即上报缓存的事件
         /// </summary>
         void Flush();
+
+        /// <summary>
+        /// 开关 SDK 内部日志（所有渠道）。Debug 包可持久化，下次启动生效。
+        /// </summary>
+        void SetLogEnabled(bool enabled);
     }
 }

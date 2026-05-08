@@ -80,6 +80,12 @@ namespace JulyCore.Module.Analytics
 
         internal bool IsAnalyticsEnabled => _isEnabled;
 
+        internal void SetLogEnabled(bool enabled)
+        {
+            EnsureProvider();
+            _analyticsProvider.SetLogEnabled(enabled);
+        }
+
         private void EnsureProvider()
         {
             if (_analyticsProvider == null)

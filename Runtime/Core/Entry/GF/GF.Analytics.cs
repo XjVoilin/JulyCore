@@ -94,6 +94,14 @@ namespace JulyCore
             /// 是否启用数据统计
             /// </summary>
             public static bool IsEnabled => Module.IsAnalyticsEnabled;
+
+            /// <summary>
+            /// 开关 SDK 内部日志（所有渠道）
+            /// </summary>
+            public static void SetLogEnabled(bool enabled)
+            {
+                Module.SetLogEnabled(enabled);
+            }
         }
     }
 }
