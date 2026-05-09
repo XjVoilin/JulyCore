@@ -9,6 +9,7 @@ using JulyCore.Module.Base;
 using JulyCore.Provider.UI;
 using JulyCore.Provider.UI.Events;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace JulyCore.Module.UI
 {
@@ -54,6 +55,7 @@ namespace JulyCore.Module.UI
                     throw new JulyException($"[{Name}] 未找到IUIProvider，请先注册UIProvider");
                 }
 
+                CreateMask();
                 return base.OnInitAsync();
             }
             catch (Exception ex)
@@ -340,6 +342,71 @@ namespace JulyCore.Module.UI
         protected override void OnShutdown()
         {
             CloseAll();
+            DestroyMask();
         }
+
+        #region Mask（全屏交互屏蔽）
+
+        private GameObject _maskRoot;
+        private bool _maskActive;
+
+        internal bool IsMaskActive => _maskActive;
+
+        internal void CreateMask()
+        {
+            if (_maskRoot != null) return;
+
+            _maskRoot = new GameObject("[UI Mask]");
+            UnityEngine.Object.DontDestroyOnLoad(_maskRoot);
+
+            var canvas = _maskRoot.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 32767;
+
+            _maskRoot.AddComponent<GraphicRaycaster>();
+
+            var imageGo = new GameObject("Blocker");
+            imageGo.transform.SetParent(_maskRoot.transform, false);
+
+            var image = imageGo.AddComponent<Image>();
+            image.color = Color.clear;
+            image.raycastTarget = true;
+
+            var rect = imageGo.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+
+            _maskRoot.SetActive(false);
+            _maskActive = false;
+        }
+
+        internal void ShowMask()
+        {
+            if (_maskRoot == null) CreateMask();
+            if (_maskActive) return;
+            _maskRoot.SetActive(true);
+            _maskActive = true;
+        }
+
+        internal void HideMask()
+        {
+            if (!_maskActive) return;
+            if (_maskRoot != null) _maskRoot.SetActive(false);
+            _maskActive = false;
+        }
+
+        private void DestroyMask()
+        {
+            if (_maskRoot != null)
+            {
+                UnityEngine.Object.Destroy(_maskRoot);
+                _maskRoot = null;
+            }
+            _maskActive = false;
+        }
+
+        #endregion
     }
 }

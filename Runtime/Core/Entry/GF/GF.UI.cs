@@ -487,6 +487,26 @@ namespace JulyCore
 
             #endregion
 
+            #region Mask（全屏交互屏蔽）
+
+            /// <summary>
+            /// 显示全屏遮罩，拦截所有 UGUI Raycast。
+            /// 同步生效，当帧阻止点击穿透。
+            /// </summary>
+            public static void ShowMask() => Module.ShowMask();
+
+            /// <summary>
+            /// 隐藏全屏遮罩，恢复 UGUI 交互。
+            /// </summary>
+            public static void HideMask() => Module.HideMask();
+
+            /// <summary>
+            /// 当前遮罩是否处于激活状态
+            /// </summary>
+            public static bool IsMaskActive => Module.IsMaskActive;
+
+            #endregion
+
             /// <summary>
             /// 重置缓存的 Provider 引用（框架重启时调用）
             /// </summary>
