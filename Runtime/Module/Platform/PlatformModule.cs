@@ -8,13 +8,11 @@ namespace JulyCore.Module.Platform
     internal class PlatformModule : ModuleBase
     {
         private IPlatformProvider _provider;
-        private readonly IPlatformRoute _route = new PlatformRoute();
 
         protected override LogChannel LogChannel => LogChannel.Platform;
         public override int Priority => Frameworkconst.PriorityPlatformModule;
 
         public int PlatformType => _provider.PlatformType;
-        public IPlatformRoute Route => _route;
 
         protected override UniTask OnInitAsync()
         {
@@ -22,14 +20,7 @@ namespace JulyCore.Module.Platform
             return UniTask.CompletedTask;
         }
 
-        public T GetService<T>() where T : class
-        {
-            return _provider.GetService<T>();
-        }
-
-        public void DeferAllServices()
-        {
-            _provider.DeferAllServices();
-        }
+        public T GetService<T>() where T : class => _provider.GetService<T>();
+        public void DeferAllServices() => _provider.DeferAllServices();
     }
 }

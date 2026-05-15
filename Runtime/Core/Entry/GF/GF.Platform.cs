@@ -1,5 +1,4 @@
 using JulyCore.Module.Platform;
-using JulyCore.Provider.Platform;
 
 namespace JulyCore
 {
@@ -8,28 +7,11 @@ namespace JulyCore
         public static class Platform
         {
             private static PlatformModule _module;
-
-            private static PlatformModule Module
-            {
-                get
-                {
-                    _module ??= GetModule<PlatformModule>();
-                    return _module;
-                }
-            }
+            private static PlatformModule Module => _module ??= GetModule<PlatformModule>();
 
             public static int PlatformType => Module.PlatformType;
-            public static IPlatformRoute Route => Module.Route;
-
-            public static T GetService<T>() where T : class
-            {
-                return Module.GetService<T>();
-            }
-
-            public static void DeferAllServices()
-            {
-                Module.DeferAllServices();
-            }
+            public static T GetService<T>() where T : class => Module.GetService<T>();
+            public static void DeferAllServices() => Module.DeferAllServices();
         }
     }
 }
