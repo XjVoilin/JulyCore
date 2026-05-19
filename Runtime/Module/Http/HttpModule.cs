@@ -142,7 +142,18 @@ namespace JulyCore.Module.Http
         public void Send(HttpQueueEntity entity)
         {
             if (entity.IsOptimistic)
-                entity.ApplyLocal();
+            {
+                try
+                {
+                    entity.ApplyLocal();
+                }
+                catch (Exception ex)
+                {
+                    LogError($"[HTTP] ApplyLocal 异常: {ex.Message}");
+                    entity.SetCompleted();
+                    return;
+                }
+            }
 
             if (_pendingData != null)
                 PersistPendingEntry(entity);
@@ -372,30 +383,34 @@ namespace JulyCore.Module.Http
             {
                 entity.Code = HttpEntityBase.CodeNetworkError;
                 entity.Msg = raw.Error ?? "Network error";
-                LogWarning($"[HTTP] 网络错误 {entity.Path}: {raw.Error} ({raw.ElapsedMs}ms)");
-                return;
-            }
-
-            if (!raw.IsSuccess)
-            {
-                entity.Code = HttpEntityBase.CodeHttpError;
-                entity.Msg = raw.Error ?? $"HTTP {raw.StatusCode}";
-                LogWarning($"[HTTP] 请求失败 {entity.Path}: {raw.StatusCode} {raw.Error}");
+                LogWarning($"[HTTP] 网络错误 {entity.Path}: {raw.Error}");
                 return;
             }
 
             var text = raw.GetText();
-            try
+            if (!string.IsNullOrEmpty(text))
             {
-                entity.ParseResponse(text);
-                Log($"[HTTP] <<< {logName} code={entity.Code}\n{text}");
+                try
+                {
+                    entity.ParseResponse(text);
+                    Log($"[HTTP] <<< {logName} code={entity.Code} (HTTP {raw.StatusCode})\n{text}");
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    if (raw.IsHttpOk)
+                    {
+                        LogError($"[HTTP] <<< {logName} 响应解析失败: {ex.Message}");
+                        entity.Code = HttpEntityBase.CodeParseError;
+                        entity.Msg = $"响应解析失败: {ex.Message}";
+                        return;
+                    }
+                }
             }
-            catch (Exception ex)
-            {
-                LogError($"[HTTP] <<< {logName} 响应解析失败: {ex.Message}");
-                entity.Code = HttpEntityBase.CodeParseError;
-                entity.Msg = $"响应解析失败: {ex.Message}";
-            }
+
+            entity.Code = HttpEntityBase.CodeHttpError;
+            entity.Msg = raw.Error ?? $"HTTP {raw.StatusCode}";
+            LogWarning($"[HTTP] 请求失败 {entity.Path}: {raw.StatusCode} {raw.Error}");
         }
 
         private string BuildUrl(string path)

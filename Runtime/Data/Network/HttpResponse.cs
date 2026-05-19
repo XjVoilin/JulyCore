@@ -1,18 +1,28 @@
-using System;
-
 namespace JulyCore.Data.Network
 {
-    [Serializable]
-    public class HttpResponse
+    public readonly struct HttpResponse
     {
-        public int StatusCode { get; set; }
-        public byte[] Data { get; set; }
-        public string Error { get; set; }
-        public long ElapsedMs { get; set; }
-        public bool IsNetworkError { get; set; }
+        public readonly int StatusCode;
+        public readonly byte[] Data;
+        public readonly string Error;
+        public readonly bool IsNetworkError;
 
+        public HttpResponse(int statusCode, byte[] data, string error, bool isNetworkError)
+        {
+            StatusCode = statusCode;
+            Data = data;
+            Error = error;
+            IsNetworkError = isNetworkError;
+        }
+
+        /// <summary>HTTP 状态码 2xx</summary>
+        public bool IsHttpOk => StatusCode >= 200 && StatusCode < 300;
+
+        /// <summary>有 response body（无论状态码）</summary>
+        public bool HasBody => Data != null && Data.Length > 0;
+
+        /// <summary>请求到达了服务器并拿到了响应</summary>
         public bool HasResponse => StatusCode > 0;
-        public bool IsSuccess => string.IsNullOrEmpty(Error);
 
         public string GetText()
         {
