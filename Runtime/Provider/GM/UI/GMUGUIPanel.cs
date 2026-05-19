@@ -253,12 +253,87 @@ namespace JulyCore.Provider.GM
                 page.gameObject.AddComponent<ContentSizeFitter>().verticalFit =
                     ContentSizeFitter.FitMode.PreferredSize;
 
-                foreach (var cmd in _categories[i].Commands)
-                    BuildCard(page, cmd);
+                BuildPageCommands(page, _categories[i].Commands);
 
                 page.gameObject.SetActive(false);
                 _pages.Add(page);
             }
+        }
+
+        void BuildPageCommands(RectTransform page, List<GMCommandInfo> commands)
+        {
+            var groups = new List<(string Group, List<GMCommandInfo> Cmds)>();
+            foreach (var cmd in commands)
+            {
+                var g = cmd.Group;
+                if (groups.Count > 0 && groups[^1].Group == g)
+                {
+                    groups[^1].Cmds.Add(cmd);
+                }
+                else
+                {
+                    groups.Add((g, new List<GMCommandInfo> { cmd }));
+                }
+            }
+
+            foreach (var (group, cmds) in groups)
+            {
+                if (string.IsNullOrEmpty(group))
+                {
+                    foreach (var cmd in cmds)
+                        BuildCard(page, cmd);
+                }
+                else
+                {
+                    BuildGroup(page, group, cmds);
+                }
+            }
+        }
+
+        void BuildGroup(RectTransform page, string groupName, List<GMCommandInfo> commands)
+        {
+            var groupRoot = NewRT($"G_{groupName}", page);
+            var vlg = groupRoot.gameObject.AddComponent<VerticalLayoutGroup>();
+            vlg.spacing = 12;
+            vlg.childForceExpandWidth = true;
+            vlg.childForceExpandHeight = false;
+
+            var hdr = NewRT("Header", groupRoot);
+            hdr.gameObject.AddComponent<LayoutElement>().preferredHeight = 48;
+            Img(hdr.gameObject, s_sep);
+
+            var hdrHlg = hdr.gameObject.AddComponent<HorizontalLayoutGroup>();
+            hdrHlg.spacing = 8;
+            hdrHlg.padding = new RectOffset(16, 16, 8, 8);
+            hdrHlg.childAlignment = TextAnchor.MiddleLeft;
+            hdrHlg.childForceExpandWidth = false;
+            hdrHlg.childForceExpandHeight = false;
+
+            var arrowRt = NewRT("Arrow", hdr);
+            arrowRt.gameObject.AddComponent<LayoutElement>().preferredWidth = 32;
+            var arrow = Txt(arrowRt, "\u25BC", 24, s_dim);
+            arrow.alignment = TextAlignmentOptions.Center;
+
+            var titleRt = NewRT("Title", hdr);
+            titleRt.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
+            Txt(titleRt, groupName, 30, s_text, FontStyles.Bold);
+
+            var content = NewRT("Content", groupRoot);
+            var cVlg = content.gameObject.AddComponent<VerticalLayoutGroup>();
+            cVlg.spacing = 16;
+            cVlg.childForceExpandWidth = true;
+            cVlg.childForceExpandHeight = false;
+
+            foreach (var cmd in commands)
+                BuildCard(content, cmd);
+
+            var btn = AddSmartButton(hdr.gameObject, enableScale: false);
+            btn.onClick.AddListener(() =>
+            {
+                var active = !content.gameObject.activeSelf;
+                content.gameObject.SetActive(active);
+                arrow.text = active ? "\u25BC" : "\u25B6";
+            });
         }
 
         void BuildCard(RectTransform parent, GMCommandInfo cmd)

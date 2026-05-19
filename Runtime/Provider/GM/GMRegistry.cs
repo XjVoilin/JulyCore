@@ -36,9 +36,13 @@ namespace JulyCore.Provider.GM
                 var cmdAttr = method.GetCustomAttribute<GMCommandAttribute>();
                 if (cmdAttr == null) continue;
 
+                var rawName = cmdAttr.DisplayName;
+                var slashIdx = rawName.IndexOf('/');
+
                 var cmdInfo = new GMCommandInfo
                 {
-                    DisplayName = cmdAttr.DisplayName,
+                    DisplayName = slashIdx > 0 ? rawName.Substring(slashIdx + 1) : rawName,
+                    Group = slashIdx > 0 ? rawName.Substring(0, slashIdx) : null,
                     Order = cmdAttr.Order,
                     CloseAfter = cmdAttr.CloseAfter,
                     Method = method,

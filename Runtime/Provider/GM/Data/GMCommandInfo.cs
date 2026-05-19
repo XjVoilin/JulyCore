@@ -7,6 +7,7 @@ namespace JulyCore.Provider.GM
     public sealed class GMCommandInfo
     {
         public string DisplayName;
+        public string Group;
         public int Order;
         public bool CloseAfter;
         public MethodInfo Method;
