@@ -1,7 +1,6 @@
 using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using JulyCore.Core;
 using JulyCore.Core.Config;
 
 namespace JulyCore.Core.Launch

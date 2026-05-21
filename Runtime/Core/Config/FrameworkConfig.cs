@@ -44,15 +44,8 @@ namespace JulyCore.Core.Config
         [Tooltip("资源系统运行模式")]
         public JPlayMode PlayMode = JPlayMode.EditorSimulateMode;
 
-        // [Tooltip("配置的格式")]
-        // public ConfigDataFormat ConfigDataFormat = ConfigDataFormat.Json;
-        
         [Header("UI 配置")]
         public UIConfig UIConfig = new();
-        
-        [Header("事件总线配置")]
-        public EventBusConfig EventBusConfig = new();
-        
         
         [Header("日志通道配置")]
         [Tooltip("启用的日志通道（控制普通日志输出，不影响 Warning/Error）")]

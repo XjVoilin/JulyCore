@@ -1,4 +1,3 @@
-using System;
 using JulyCore.Core;
 using JulyCore.Module.Base;
 
@@ -29,10 +28,9 @@ namespace JulyCore
 
 
         /// <summary>
-        /// 基础设施事件订阅入口（Scene/Network/Audio 等）。
-        /// 仅支持订阅，不可发布。业务事件请使用 this.Subscribe() / this.Publish()。
+        /// 基础设施事件总线（Scene/Network/Audio 等）
         /// </summary>
-        public static ICoreEventSubscriber CoreEvent => _context.CoreEvent;
+        public static JulyEvents.IEventBus CoreEvent => _context.EventBus;
 
         /// <summary>
         /// 从服务注册表解析已注册的服务实例

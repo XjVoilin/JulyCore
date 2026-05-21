@@ -12,7 +12,7 @@ namespace JulyCore.Core
         private IServiceRegistry _registry;
         private IModuleService _moduleService;
         private IProviderService _providerService;
-        private EventBus _eventBus;
+        private JulyEvents.IEventBus _eventBus;
         private FrameworkConfig _frameworkConfig;
         private bool _isInitialized;
 
@@ -35,14 +35,9 @@ namespace JulyCore.Core
         public IProviderService ProviderService => _providerService;
 
         /// <summary>
-        /// 事件总线（内部完整接口，供 ModuleBase 使用）
+        /// 事件总线
         /// </summary>
         internal JulyEvents.IEventBus EventBus => _eventBus;
-
-        /// <summary>
-        /// 只读事件订阅入口（公开给上层，仅订阅不可发布）
-        /// </summary>
-        public ICoreEventSubscriber CoreEvent => _eventBus;
         
         /// <summary>
         /// 框架配置
@@ -52,13 +47,13 @@ namespace JulyCore.Core
         internal CoreContext(FrameworkConfig frameworkConfig)
         {
             _frameworkConfig = frameworkConfig;
-            JulyEvents.EventBus.ErrorHandler ??= ex => JLogger.LogException(ex);
+            JulyEvents.EventBus.ErrorHandler ??= JLogger.LogException;
             InitializeServices();
         }
 
         internal void RegisterProvider<T>(T provider) where T : IProvider
         {
-            _registry.Register<T>(provider);
+            _registry.Register(provider);
             _providerService.Track(provider);
         }
 
@@ -66,7 +61,7 @@ namespace JulyCore.Core
         {
             if (_registry.TryResolve<T>(out var old) && old is IProvider oldProvider)
                 _providerService.Untrack(oldProvider);
-            _registry.Register<T>(newProvider);
+            _registry.Register(newProvider);
             _providerService.Track(newProvider);
         }
 
@@ -79,12 +74,12 @@ namespace JulyCore.Core
 
             _moduleService = new ModuleService();
             _providerService = new ProviderService();
-            _eventBus = new EventBus(_frameworkConfig.EventBusConfig);
+            _eventBus = new JulyEvents.EventBus();
 
             _registry.Register(_registry);
             _registry.Register(_moduleService);
             _registry.Register(_providerService);
-            _registry.Register<JulyEvents.IEventBus>(_eventBus);
+            _registry.Register(_eventBus);
             _registry.Register(_frameworkConfig);
         }
 
@@ -132,8 +127,6 @@ namespace JulyCore.Core
             }
 
             _moduleService.Update(elapseSeconds, realElapseSeconds);
-            
-            _eventBus.ProcessDeferredActions();
         }
 
         /// <summary>
@@ -143,7 +136,7 @@ namespace JulyCore.Core
         {
             _moduleService?.Clear();
             _providerService?.Clear();
-            _eventBus?.Clear();
+            _eventBus?.Dispose();
             _registry?.Clear();
             _isInitialized = false;
         }

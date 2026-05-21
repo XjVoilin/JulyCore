@@ -12,7 +12,6 @@ namespace JulyCore.Core
         public static readonly string TagModuleService = "[ModuleService]";
         public static readonly string TagProviderService = "[ProviderService]";
         public static readonly string TagJulyGameEntry = "[JulyGameEntry]";
-        public static readonly string TagEventBus = "[EventBus]";
         public static readonly string TagDependencyContainer = "[DependencyContainer]";
 
         // 模块优先级（数值越小优先级越高）
