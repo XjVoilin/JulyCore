@@ -676,7 +676,7 @@ namespace JulyCore.Provider.UI
             }
             catch (Exception ex)
             {
-                LogWarning($"[{Name}] 设置UI参数失败: {ex.Message}");
+                GF.LogException(ex);
             }
         }
 
@@ -718,7 +718,6 @@ namespace JulyCore.Provider.UI
                 return;
             }
 
-            // 动画开始前：禁用交互，防止用户在动画期间点击
             uiInfo.SetInteractable(false);
 
             try
@@ -729,14 +728,12 @@ namespace JulyCore.Provider.UI
                     await strategy.PlayOpenAnimationAsync(uiInfo, cancellationToken);
                 }
 
-                // 动画完成后：启用交互
                 uiInfo.SetInteractable(true);
             }
             catch (Exception ex)
             {
-                // 异常时：确保恢复交互状态（防止窗口卡在不可交互状态）
                 uiInfo.SetInteractable(true);
-                LogWarning($"[{Name}] 播放打开动画失败: {ex.Message}");
+                GF.LogException(ex);
             }
         }
 
@@ -752,7 +749,6 @@ namespace JulyCore.Provider.UI
                 return;
             }
 
-            // 动画开始前：禁用交互，防止用户在动画期间点击
             uiInfo.SetInteractable(false);
 
             try
@@ -762,14 +758,11 @@ namespace JulyCore.Provider.UI
                 {
                     await strategy.PlayCloseAnimationAsync(uiInfo, cancellationToken);
                 }
-
-                // 关闭动画完成后：保持禁用状态（窗口即将关闭，不需要恢复交互）
             }
             catch (Exception ex)
             {
-                // 异常时：确保保持禁用状态（窗口要关闭，不应该恢复交互）
                 uiInfo.SetInteractable(false);
-                LogWarning($"[{Name}] 播放关闭动画失败: {ex.Message}");
+                GF.LogException(ex);
             }
         }
 
@@ -969,7 +962,7 @@ namespace JulyCore.Provider.UI
             }
             catch (Exception ex)
             {
-                LogWarning($"[{ui.name}] 调用UI {methodName}失败: {ex.Message}");
+                GF.LogException(ex);
             }
         }
 
