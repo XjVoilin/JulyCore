@@ -15,7 +15,7 @@ namespace JulyCore.Provider.UI
             _cam = GetComponent<Camera>();
             _designOrthoSize = _cam.orthographicSize;
 
-            var uiConfig = FrameworkContext.Instance?.FrameworkConfig?.UIConfig;
+            var uiConfig = CoreContext.Instance?.FrameworkConfig?.UIConfig;
             _designResolution = uiConfig?.DesignResolution ?? new Vector2(1080, 1920);
         }
 

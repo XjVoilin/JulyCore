@@ -1,5 +1,4 @@
 using System;
-using JulyCore.Module.Task;
 using UnityEngine;
 
 namespace JulyCore.Core.Config
@@ -54,8 +53,6 @@ namespace JulyCore.Core.Config
         [Header("事件总线配置")]
         public EventBusConfig EventBusConfig = new();
         
-        [Header("任务时间重置配置")]
-        public TaskResetConfig TaskResetConfig =  new(); 
         
         [Header("日志通道配置")]
         [Tooltip("启用的日志通道（控制普通日志输出，不影响 Warning/Error）")]

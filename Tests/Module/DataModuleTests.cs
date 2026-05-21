@@ -16,12 +16,12 @@ namespace JulyGF.Tests.Module
     {
         private SerializeModule _module;
         private MockSerializeProvider _provider;
-        private FrameworkContext _context;
+        private CoreContext _context;
 
         [SetUp]
         public void SetUp()
         {
-            _context = FrameworkContext.Instance;
+            _context = CoreContext.Instance;
             _provider = new MockSerializeProvider();
             
             _context.Registry.Register<ISerializeProvider>(_provider);

@@ -17,34 +17,34 @@ namespace JulyCore.Core.Launch
         /// </summary>
         public Action OnCoreReady { get; set; }
 
-        private readonly FrameworkContext _frameworkContext;
+        private readonly CoreContext _coreContext;
         private readonly IModuleService _moduleService;
 
         internal LaunchContext(
             FrameworkConfig config,
             CancellationToken token,
-            FrameworkContext frameworkContext)
+            CoreContext coreContext)
         {
             Config = config;
             Token = token;
-            Registry = frameworkContext.Registry;
-            _moduleService = frameworkContext.ModuleService;
-            _frameworkContext = frameworkContext;
+            Registry = coreContext.Registry;
+            _moduleService = coreContext.ModuleService;
+            _coreContext = coreContext;
         }
 
         public void RegisterModule<T>() where T : IModule, new()
             => _moduleService.RegisterModule<T>();
 
         public void RegisterProvider<T>(T provider) where T : IProvider
-            => _frameworkContext.RegisterProvider(provider);
+            => _coreContext.RegisterProvider(provider);
 
         public void ReplaceProvider<T>(T newProvider) where T : IProvider
-            => _frameworkContext.ReplaceProvider(newProvider);
+            => _coreContext.ReplaceProvider(newProvider);
 
         public async UniTask InitProvidersAsync()
-            => await _frameworkContext.InitProvidersAsync();
+            => await _coreContext.InitProvidersAsync();
 
         public async UniTask InitModulesAsync()
-            => await _frameworkContext.InitModulesAsync();
+            => await _coreContext.InitModulesAsync();
     }
 }

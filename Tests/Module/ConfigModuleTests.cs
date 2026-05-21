@@ -1,4 +1,4 @@
-﻿// using System;
+// using System;
 // using System.Collections;
 // using System.Collections.Generic;
 // using Cysharp.Threading.Tasks;
@@ -16,12 +16,12 @@
 //     {
 //         private ConfigModule _module;
 //         private MockConfigProvider _provider;
-//         private FrameworkContext _context;
+//         private CoreContext _context;
 //
 //         [SetUp]
 //         public void SetUp()
 //         {
-//             _context = FrameworkContext.Instance;
+//             _context = CoreContext.Instance;
 //             _provider = new MockConfigProvider();
 //             _context.ProviderService.RegisterProvider(_provider);
 //             _module = new ConfigModule();

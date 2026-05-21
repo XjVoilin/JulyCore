@@ -8,7 +8,7 @@ namespace JulyCore.Core
         public static readonly string FrameworkName = "JulyGF";
 
         // 日志标签
-        public static readonly string TagFrameworkContext = "[FrameworkContext]";
+        public static readonly string TagCoreContext = "[CoreContext]";
         public static readonly string TagModuleService = "[ModuleService]";
         public static readonly string TagProviderService = "[ProviderService]";
         public static readonly string TagJulyGameEntry = "[JulyGameEntry]";

@@ -7,17 +7,17 @@ namespace JulyCore.Core
     /// 框架上下文
     /// 统一管理所有框架服务，提供依赖注入容器
     /// </summary>
-    internal class FrameworkContext
+    internal class CoreContext
     {
         private IServiceRegistry _registry;
         private IModuleService _moduleService;
         private IProviderService _providerService;
-        private IEventBus _eventBus;
+        private EventBus _eventBus;
         private FrameworkConfig _frameworkConfig;
         private bool _isInitialized;
 
-        internal static FrameworkContext _instance;
-        public static FrameworkContext Instance => _instance;
+        internal static CoreContext _instance;
+        public static CoreContext Instance => _instance;
 
         /// <summary>
         /// 服务注册表（DI）
@@ -35,18 +35,24 @@ namespace JulyCore.Core
         public IProviderService ProviderService => _providerService;
 
         /// <summary>
-        /// 事件总线
+        /// 事件总线（内部完整接口，供 ModuleBase 使用）
         /// </summary>
-        public IEventBus EventBus => _eventBus;
+        internal JulyEvents.IEventBus EventBus => _eventBus;
+
+        /// <summary>
+        /// 只读事件订阅入口（公开给上层，仅订阅不可发布）
+        /// </summary>
+        public ICoreEventSubscriber CoreEvent => _eventBus;
         
         /// <summary>
         /// 框架配置
         /// </summary>
         internal FrameworkConfig FrameworkConfig => _frameworkConfig;
 
-        internal FrameworkContext(FrameworkConfig frameworkConfig)
+        internal CoreContext(FrameworkConfig frameworkConfig)
         {
             _frameworkConfig = frameworkConfig;
+            JulyEvents.EventBus.ErrorHandler ??= ex => JLogger.LogException(ex);
             InitializeServices();
         }
 
@@ -78,7 +84,7 @@ namespace JulyCore.Core
             _registry.Register(_registry);
             _registry.Register(_moduleService);
             _registry.Register(_providerService);
-            _registry.Register(_eventBus);
+            _registry.Register<JulyEvents.IEventBus>(_eventBus);
             _registry.Register(_frameworkConfig);
         }
 
@@ -106,13 +112,13 @@ namespace JulyCore.Core
         {
             if (!_isInitialized) return;
 
-            JLogger.Log($"{Frameworkconst.TagFrameworkContext} 开始关闭框架");
+            JLogger.Log($"{Frameworkconst.TagCoreContext} 开始关闭框架");
 
             _moduleService.Shutdown();
             _providerService.ShutdownAll();
 
             _isInitialized = false;
-            JLogger.Log($"{Frameworkconst.TagFrameworkContext} 框架已关闭");
+            JLogger.Log($"{Frameworkconst.TagCoreContext} 框架已关闭");
         }
 
         /// <summary>
@@ -125,10 +131,8 @@ namespace JulyCore.Core
                 return;
             }
 
-            // 更新所有模块
             _moduleService.Update(elapseSeconds, realElapseSeconds);
             
-            // 处理事件总线延迟动作（帧分片机制）
             _eventBus.ProcessDeferredActions();
         }
 

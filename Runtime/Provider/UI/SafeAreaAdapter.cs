@@ -15,7 +15,7 @@ namespace JulyCore.Provider.UI
         private void Awake()
         {
             _rect = GetComponent<RectTransform>();
-            FrameworkContext.Instance?.Registry?.TryResolve(out _platform);
+            CoreContext.Instance?.Registry?.TryResolve(out _platform);
             _canvasScaler = GetComponentInParent<CanvasScaler>();
         }
 

@@ -11,7 +11,7 @@ namespace JulyCore.Module.Base
     public abstract class ModuleBase : IModule, IPriority
     {
         private bool _isInitialized;
-        private FrameworkContext _context;
+        private CoreContext _context;
 
         public string Name => GetType().Name;
         public bool IsInitialized => _isInitialized;
@@ -20,7 +20,7 @@ namespace JulyCore.Module.Base
 
         #region 受控服务访问
 
-        protected IEventBus EventBus => _context?.EventBus;
+        protected JulyEvents.IEventBus EventBus => _context?.EventBus;
         protected FrameworkConfig FrameworkConfig => _context.FrameworkConfig;
 
         protected T GetProvider<T>() where T : IProvider
@@ -76,7 +76,7 @@ namespace JulyCore.Module.Base
                 return UniTask.CompletedTask;
             }
 
-            _context = FrameworkContext.Instance;
+            _context = CoreContext.Instance;
             var task = OnInitAsync();
 
             if (task.Status == UniTaskStatus.Succeeded)

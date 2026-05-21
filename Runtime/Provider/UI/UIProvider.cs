@@ -118,7 +118,7 @@ namespace JulyCore.Provider.UI
         protected override async UniTask OnInitAsync()
         {
             // 读取 UI 配置
-            _uiConfig = FrameworkContext.Instance?.FrameworkConfig?.UIConfig;
+            _uiConfig = CoreContext.Instance?.FrameworkConfig?.UIConfig;
 
             // 初始化资源路径解析器（默认使用约定路径）
             _pathResolver = new DefaultUIResourcePathResolver();
@@ -132,7 +132,7 @@ namespace JulyCore.Provider.UI
 
         private async UniTask InitTipManager()
         {
-            var tipConfig = FrameworkContext.Instance?.FrameworkConfig?.TipConfig;
+            var tipConfig = CoreContext.Instance?.FrameworkConfig?.TipConfig;
             if (tipConfig == null)
             {
                 Log($"[{Name}] TipConfig 未配置，Tip 功能不可用");

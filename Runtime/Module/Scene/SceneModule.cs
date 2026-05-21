@@ -18,7 +18,6 @@ namespace JulyCore.Module.Scene
     internal class SceneModule : ModuleBase, IModuleDependency
     {
         private IResourceProvider _resourceProvider;
-        private IEventBus _eventBus;
 
         protected override LogChannel LogChannel => LogChannel.Scene;
 
@@ -60,9 +59,6 @@ namespace JulyCore.Module.Scene
                     throw new JulyException($"[{Name}] 未找到 IResourceProvider，请先注册 IResourceProvider");
                 }
 
-                // 获取事件总线
-                _eventBus = EventBus;
-
                 // 记录当前场景
                 var activeScene = SceneManager.GetActiveScene();
                 if (activeScene.IsValid())
@@ -94,7 +90,7 @@ namespace JulyCore.Module.Scene
             EnsureProvider();
 
             // 发布场景加载开始事件
-            _eventBus.Publish(new SceneLoadStartEvent
+            EventBus.Publish(new SceneLoadStartEvent
             {
                 SceneName = sceneName,
                 LoadMode = loadSceneMode
@@ -109,7 +105,7 @@ namespace JulyCore.Module.Scene
                     _currentSceneName = sceneName;
                 }
 
-                _eventBus.Publish(new SceneLoadCompleteEvent
+                EventBus.Publish(new SceneLoadCompleteEvent
                 {
                     SceneName = sceneName,
                     Scene = scene,
@@ -136,7 +132,7 @@ namespace JulyCore.Module.Scene
             EnsureProvider();
 
             // 发布场景卸载开始事件
-            _eventBus.Publish(new SceneUnloadStartEvent
+            EventBus.Publish(new SceneUnloadStartEvent
             {
                 SceneName = sceneName
             });
@@ -152,8 +148,7 @@ namespace JulyCore.Module.Scene
                     _currentSceneName = null;
                 }
 
-                // 发布场景卸载完成事件
-                _eventBus.Publish(new SceneUnloadCompleteEvent
+                EventBus.Publish(new SceneUnloadCompleteEvent
                 {
                     SceneName = sceneName,
                     Success = success
@@ -165,8 +160,7 @@ namespace JulyCore.Module.Scene
             {
                 LogError($"[{Name}] 场景 {sceneName} 卸载失败: {ex.Message}");
 
-                // 即使失败也发布事件
-                _eventBus.Publish(new SceneUnloadCompleteEvent
+                EventBus.Publish(new SceneUnloadCompleteEvent
                 {
                     SceneName = sceneName,
                     Success = false
@@ -191,7 +185,7 @@ namespace JulyCore.Module.Scene
 
             var fromSceneName = _currentSceneName;
 
-            _eventBus.Publish(new SceneSwitchStartEvent
+            EventBus.Publish(new SceneSwitchStartEvent
             {
                 FromSceneName = fromSceneName ?? string.Empty,
                 ToSceneName = sceneName
@@ -207,7 +201,7 @@ namespace JulyCore.Module.Scene
                 // LoadSceneMode.Single 会自动卸载旧场景，无需手动 Unload
                 var scene = await LoadSceneAsync(sceneName, LoadSceneMode.Single, cancellationToken);
 
-                _eventBus.Publish(new SceneSwitchCompleteEvent
+                EventBus.Publish(new SceneSwitchCompleteEvent
                 {
                     FromSceneName = fromSceneName ?? string.Empty,
                     ToSceneName = sceneName,
@@ -240,7 +234,7 @@ namespace JulyCore.Module.Scene
             var previousSceneName = _sceneStack.Pop();
             var fromSceneName = _currentSceneName;
 
-            _eventBus.Publish(new SceneSwitchStartEvent
+            EventBus.Publish(new SceneSwitchStartEvent
             {
                 FromSceneName = fromSceneName ?? string.Empty,
                 ToSceneName = previousSceneName
@@ -250,7 +244,7 @@ namespace JulyCore.Module.Scene
             {
                 var scene = await LoadSceneAsync(previousSceneName, LoadSceneMode.Single, cancellationToken);
 
-                _eventBus.Publish(new SceneSwitchCompleteEvent
+                EventBus.Publish(new SceneSwitchCompleteEvent
                 {
                     FromSceneName = fromSceneName ?? string.Empty,
                     ToSceneName = previousSceneName,
@@ -298,7 +292,6 @@ namespace JulyCore.Module.Scene
             _sceneStack.Clear();
 
             _resourceProvider = null;
-            _eventBus = null;
             _currentSceneName = null;
         }
 

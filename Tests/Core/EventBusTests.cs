@@ -155,9 +155,9 @@ namespace JulyGF.Tests.Core
         {
             // Arrange
             var executionOrder = new List<int>();
-            _eventBus.Subscribe<TestEvent>(evt => executionOrder.Add(3), this, 3);
-            _eventBus.Subscribe<TestEvent>(evt => executionOrder.Add(1), this, 1);
-            _eventBus.Subscribe<TestEvent>(evt => executionOrder.Add(2), this, 2);
+            _eventBus.SubscribeWithPriority<TestEvent>(evt => executionOrder.Add(3), this, 3);
+            _eventBus.SubscribeWithPriority<TestEvent>(evt => executionOrder.Add(1), this, 1);
+            _eventBus.SubscribeWithPriority<TestEvent>(evt => executionOrder.Add(2), this, 2);
 
             // Act
             _eventBus.Publish(new TestEvent());
@@ -174,9 +174,9 @@ namespace JulyGF.Tests.Core
         {
             // Arrange
             var executionOrder = new List<int>();
-            _eventBus.Subscribe<TestEvent>(evt => executionOrder.Add(1), this, 0);
-            _eventBus.Subscribe<TestEvent>(evt => executionOrder.Add(2), this, 0);
-            _eventBus.Subscribe<TestEvent>(evt => executionOrder.Add(3), this, 0);
+            _eventBus.SubscribeWithPriority<TestEvent>(evt => executionOrder.Add(1), this, 0);
+            _eventBus.SubscribeWithPriority<TestEvent>(evt => executionOrder.Add(2), this, 0);
+            _eventBus.SubscribeWithPriority<TestEvent>(evt => executionOrder.Add(3), this, 0);
 
             // Act
             _eventBus.Publish(new TestEvent());

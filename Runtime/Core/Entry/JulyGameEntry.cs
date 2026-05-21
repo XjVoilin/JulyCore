@@ -27,7 +27,7 @@ namespace JulyCore.Core
         {
             try
             {
-                var context = FrameworkContext._instance = new FrameworkContext(frameworkConfig);
+                var context = CoreContext._instance = new CoreContext(frameworkConfig);
 
                 var ctx = new LaunchContext(
                     frameworkConfig,
@@ -61,14 +61,14 @@ namespace JulyCore.Core
         protected virtual void Update()
         {
             if (!_coreReady) return;
-            FrameworkContext.Instance.Update(Time.deltaTime, Time.unscaledDeltaTime);
+            CoreContext.Instance.Update(Time.deltaTime, Time.unscaledDeltaTime);
         }
 
         protected virtual void OnDestroy()
         {
             try
             {
-                FrameworkContext.Instance?.Shutdown();
+                CoreContext.Instance?.Shutdown();
                 JLogger.Log("[Launch] Framework shutdown");
             }
             catch (Exception ex)

@@ -616,12 +616,9 @@ namespace JulyCore.Provider.GM
             return t;
         }
 
-        static UISmartButton AddSmartButton(GameObject go, bool enableScale = true)
+        static UnityEngine.UI.Button AddSmartButton(GameObject go, bool enableScale = true)
         {
-            var btn = go.AddComponent<UISmartButton>();
-            btn.enableScale = enableScale;
-            btn.enableSound = false;
-            btn.enableCooldown = false;
+            var btn = go.AddComponent<UnityEngine.UI.Button>();
             return btn;
         }
 

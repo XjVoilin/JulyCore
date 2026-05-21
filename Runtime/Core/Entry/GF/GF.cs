@@ -10,7 +10,7 @@ namespace JulyCore
     /// </summary>
     public static partial class GF
     {
-        private static FrameworkContext _context => FrameworkContext.Instance;
+        private static CoreContext _context => CoreContext.Instance;
         
         /// <summary>
         /// 获取模块
@@ -27,6 +27,12 @@ namespace JulyCore
             return module;
         }
 
+
+        /// <summary>
+        /// 基础设施事件订阅入口（Scene/Network/Audio 等）。
+        /// 仅支持订阅，不可发布。业务事件请使用 this.Subscribe() / this.Publish()。
+        /// </summary>
+        public static ICoreEventSubscriber CoreEvent => _context.CoreEvent;
 
         /// <summary>
         /// 从服务注册表解析已注册的服务实例

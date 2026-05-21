@@ -24,12 +24,12 @@ namespace JulyGF.Tests.Provider.UI
     {
         private UIProvider _provider;
         private MockResourceProvider _resourceProvider;
-        private FrameworkContext _context;
+        private CoreContext _context;
 
         [SetUp]
         public void SetUp()
         {
-            _context = FrameworkContext.Instance;
+            _context = CoreContext.Instance;
             _resourceProvider = new MockResourceProvider();
             
             _context.Registry.Register<IResourceProvider>(_resourceProvider);

@@ -15,7 +15,7 @@ namespace JulyCore
         {
             if (_context == null)
                 throw new InvalidOperationException(
-                    $"[GF] FrameworkContext 尚未初始化，无法注册 Provider: {instance?.GetType().Name}");
+                    $"[GF] CoreContext 尚未初始化，无法注册 Provider: {instance?.GetType().Name}");
             if (instance == null) throw new ArgumentNullException(nameof(instance));
 
             _context.RegisterProvider(instance);
@@ -29,7 +29,7 @@ namespace JulyCore
         {
             if (_context == null)
                 throw new InvalidOperationException(
-                    $"[GF] FrameworkContext 尚未初始化，无法注册 Provider: {instance?.GetType().Name}");
+                    $"[GF] CoreContext 尚未初始化，无法注册 Provider: {instance?.GetType().Name}");
             if (instance == null) throw new ArgumentNullException(nameof(instance));
 
             if (_context.Registry.TryResolve<TInterface>(out var old) && old is IProvider oldProvider)

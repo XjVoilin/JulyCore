@@ -5,7 +5,6 @@ using System.Diagnostics;
 
 namespace JulyCore.Core
 {
-    
     /// <summary>
     /// 事件总线配置
     /// </summary>
@@ -35,9 +34,9 @@ namespace JulyCore.Core
 
     
     /// <summary>
-    /// 事件总线实现
+    /// 事件总线实现 — 实现 JulyEvents.IEventBus 统一接口，同时保留帧分片、优先级等高级特性
     /// </summary>
-    internal class EventBus : IEventBus
+    internal class EventBus : JulyEvents.IEventBus, ICoreEventSubscriber
     {
         private readonly ConcurrentDictionary<Type, List<Delegate>> _handlers = new();
         private readonly Dictionary<object, HashSet<HandlerInfo>> _targetToHandlers = new();
@@ -46,6 +45,7 @@ namespace JulyCore.Core
         private readonly ConcurrentQueue<Action> _deferredActions = new();
         private readonly object _lockObject = new();
         private EventBusConfig _config;
+        private bool _disposed;
 
 #if JULYGF_ENABLE_LOG
         private Stopwatch _stopwatch = new Stopwatch();
@@ -63,19 +63,21 @@ namespace JulyCore.Core
             _config = config;
         }
 
-        public void Subscribe<TEvent>(Action<TEvent> handler, object target) where TEvent : IEvent
-            => Subscribe(handler, target, 0);
+        public void Subscribe<T>(Action<T> handler, object owner)
+            => SubscribeWithPriority(handler, owner, 0);
 
-        public void Subscribe<TEvent>(Action<TEvent> handler, object target, int priority) where TEvent : IEvent
+        public void SubscribeWithPriority<T>(Action<T> handler, object owner, int priority)
         {
+            if (_disposed) return;
             if (handler == null) throw new ArgumentNullException(nameof(handler));
-            if (target == null) throw new ArgumentNullException(nameof(target));
-            SubscribeInternal(typeof(TEvent), handler, target, priority);
+            if (owner == null) throw new ArgumentNullException(nameof(owner));
+            SubscribeInternal(typeof(T), handler, owner, priority);
         }
 
-        public void Unsubscribe<TEvent>(Action<TEvent> handler) where TEvent : IEvent
+        public void Unsubscribe<T>(Action<T> handler)
         {
-            if (handler != null) UnsubscribeInternal(typeof(TEvent), handler);
+            if (_disposed) return;
+            if (handler != null) UnsubscribeInternal(typeof(T), handler);
         }
 
         private void SubscribeInternal(Type eventType, Delegate handler, object target, int priority)
@@ -117,7 +119,6 @@ namespace JulyCore.Core
                     _handlers.TryRemove(eventType, out _);
                 }
 
-                // 从映射中移除
                 var targetsToRemove = new List<object>();
                 foreach (var kvp in _targetToHandlers)
                 {
@@ -151,11 +152,12 @@ namespace JulyCore.Core
             return false;
         }
 
-        public void Publish<TEvent>(TEvent eventData) where TEvent : IEvent
+        public void Publish<T>(T eventData)
         {
+            if (_disposed) return;
             if (eventData == null) return;
 
-            var eventType = typeof(TEvent);
+            var eventType = typeof(T);
 
             if (_handlers.TryGetValue(eventType, out var handlers))
             {
@@ -163,7 +165,7 @@ namespace JulyCore.Core
             }
         }
 
-        public void ProcessDeferredActions()
+        internal void ProcessDeferredActions()
         {
             var processedCount = 0;
             while (_deferredActions.TryDequeue(out var action) && processedCount < _config.maxHandlersPerFrame)
@@ -180,15 +182,16 @@ namespace JulyCore.Core
             }
         }
 
-        public int PendingDeferredActionCount => _deferredActions.Count;
+        internal int PendingDeferredActionCount => _deferredActions.Count;
 
-        public void UnsubscribeAll(object target)
+        public void UnsubscribeAll(object owner)
         {
-            if (target == null) return;
+            if (_disposed) return;
+            if (owner == null) return;
 
             lock (_lockObject)
             {
-                if (!_targetToHandlers.TryGetValue(target, out var handlerSet)) return;
+                if (!_targetToHandlers.TryGetValue(owner, out var handlerSet)) return;
 
                 var handlersToRemove = new List<HandlerInfo>(handlerSet);
                 foreach (var handlerInfo in handlersToRemove)
@@ -206,11 +209,11 @@ namespace JulyCore.Core
                     _handlerPriorityCache.Remove(handlerInfo.Handler);
                 }
 
-                _targetToHandlers.Remove(target);
+                _targetToHandlers.Remove(owner);
             }
         }
 
-        public void Clear()
+        internal void Clear()
         {
             lock (_lockObject)
             {
@@ -223,12 +226,17 @@ namespace JulyCore.Core
             _deferredActions.Clear();
         }
 
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            Clear();
+        }
+
         #region 私有辅助方法
 
-        private void InvokeHandlers<TEvent>(List<Delegate> handlers, TEvent eventData, Type eventType)
-            where TEvent : IEvent
+        private void InvokeHandlers<T>(List<Delegate> handlers, T eventData, Type eventType)
         {
-            // 在锁内快照 handler 列表，避免遍历期间 Subscribe/Unsubscribe 修改集合导致崩溃
             Delegate[] snapshot;
             lock (_lockObject)
             {
@@ -238,11 +246,11 @@ namespace JulyCore.Core
 
             if (snapshot.Length == 1)
             {
-                SafeInvoke(snapshot[0] as Action<TEvent>, eventData, eventType);
+                SafeInvoke(snapshot[0] as Action<T>, eventData, eventType);
                 return;
             }
 
-            var prioritizedHandlers = GetSortedHandlersFromSnapshot<Action<TEvent>>(snapshot);
+            var prioritizedHandlers = GetSortedHandlersFromSnapshot<Action<T>>(snapshot);
 
             if (_config.enableFrameSlicing && prioritizedHandlers.Count > _config.maxHandlersPerFrame)
             {
@@ -291,8 +299,7 @@ namespace JulyCore.Core
             return result;
         }
 
-        private void SafeInvoke<TEvent>(Action<TEvent> handler, TEvent eventData, Type eventType)
-            where TEvent : IEvent
+        private void SafeInvoke<T>(Action<T> handler, T eventData, Type eventType)
         {
             if (handler == null) return;
             if (!CheckExceptionThreshold(handler)) return;
