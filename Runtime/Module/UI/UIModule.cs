@@ -97,7 +97,7 @@ namespace JulyCore.Module.UI
             return ui;
         }
 
-        internal void Close(int id, bool destroy = true)
+        internal void Close(int id, bool destroy = true, UIAnimationType? animationType = null)
         {
             if (!_idToIdentifier.TryGetValue(id, out var identifier))
             {
@@ -105,7 +105,7 @@ namespace JulyCore.Module.UI
                 return;
             }
 
-            Close(identifier);
+            Close(identifier, destroy, animationType);
         }
 
         internal void Close(WindowIdentifier identifier, bool destroy = true, UIAnimationType? animationType = null)

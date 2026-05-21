@@ -182,9 +182,10 @@ namespace JulyCore
             /// </summary>
             /// <param name="windowId">窗口ID</param>
             /// <param name="destroy">是否销毁（false则隐藏，可再次显示）</param>
-            public static void Close(int windowId, bool destroy = false)
+            /// <param name="animationType">关闭动画类型覆盖，null 则走配置</param>
+            public static void Close(int windowId, bool destroy = false, UIAnimationType? animationType = null)
             {
-                Module.Close(windowId, destroy);
+                Module.Close(windowId, destroy, animationType);
             }
 
             /// <summary>
