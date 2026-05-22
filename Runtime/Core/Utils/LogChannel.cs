@@ -24,12 +24,6 @@ namespace JulyCore.Core
         Audio = 1 << 7,
         Localization = 1 << 8,
         
-        // 业务模块
-        Task = 1 << 9,
-        Guide = 1 << 10,
-        RedDot = 1 << 11,
-        ABTest = 1 << 12,
-        Activity = 1 << 13,
         
         // 网络与性能
         Network = 1 << 14,
@@ -49,7 +43,6 @@ namespace JulyCore.Core
         // 其它
         Scene = 1 << 24,
         Fsm = 1 << 25,
-        Combat = 1 << 26,
         Encryption = 1 << 27,
         
         /// <summary>

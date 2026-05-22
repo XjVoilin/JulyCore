@@ -32,13 +32,7 @@ namespace JulyCore.Core
         public const int PriorityAudioModule = 32;
         public const int PrioritySceneModule = 35;
         public const int PriorityUIModule = 40;
-        public const int PriorityABTestModule = 41;          // AB测试模块（在任务模块之前，用于功能开关）
-        public const int PriorityTaskModule = 42;           // 任务模块
-        public const int PriorityActivityModule = 43;       // 活动模块（在任务模块之后）
-        public const int PriorityRedDotModule = 44;         // 红点模块（在活动模块之后，便于联动）
         public const int PriorityPerformanceModule = 45;  // 性能监控模块（在UIModule之后）
-        public const int PriorityGuideModule = 50;        // 引导模块（在UI之后）
-        public const int PriorityCombatModule = 60;       // 战斗模块
 
         // Provider 优先级（数值越小优先级越高，越先初始化）
         // 基础服务层（无依赖）
@@ -70,26 +64,6 @@ namespace JulyCore.Core
         public const int PriorityHttpProvider = 49;            // HTTP
         public const int PriorityNetworkProvider = 50;        // WebSocket
         public const int PriorityAnalyticsProvider = 51;      // 数据分析
-        public const int PriorityTaskProvider = 52;           // 任务
-        public const int PriorityActivityProvider = 53;       // 活动
-        public const int PriorityRedDotProvider = 54;         // 红点
-        public const int PriorityABTestProvider = 55;         // AB测试
-        public const int PriorityGuideProvider = 56;          // 引导
-        public const int PriorityCombatProvider = 57;         // 战斗
-        
-        #region SaveKey
-        
-        /// <summary>
-        /// 新手引导存档Key
-        /// </summary>
-        public const string GuideSaveKey = "guide_progress";
-        
-        /// <summary>
-        /// 活动数据存档Key
-        /// </summary>
-        public const string ActivitySaveKey = "activity_data";
-        
-        #endregion
         
         /// <summary>
         /// 标记为脏时,如果同时携带的信号级别是:Medium  那么如果当前总共被标记的个数的阈值超过了这个值,就会被保存
