@@ -17,6 +17,10 @@ public class UITipItem : MonoBehaviour
     private Action<UITipItem> _onComplete;
     private Tween _fadeTween;
     private Tweener _moveTweener;
+    private float _duration;
+    private float _fadeOutDuration;
+
+    public string Message { get; private set; }
 
     private void Awake()
     {
@@ -43,6 +47,9 @@ public class UITipItem : MonoBehaviour
         float enterOffset = 0f, float enterDuration = 0.2f)
     {
         _onComplete = onComplete;
+        _duration = duration;
+        _fadeOutDuration = fadeOutDuration;
+        Message = message;
 
         if (_text != null)
         {
@@ -72,9 +79,32 @@ public class UITipItem : MonoBehaviour
             _rectTransform.anchoredPosition = Vector2.zero;
         }
 
-        _fadeTween = DOVirtual.DelayedCall(duration, () =>
+        StartFadeTimer();
+    }
+
+    /// <summary>
+    /// 重置计时器（同内容去重时调用）
+    /// </summary>
+    public void RestartTimer()
+    {
+        _fadeTween?.Kill();
+        _fadeTween = null;
+
+        if (_canvasGroup != null)
+            _canvasGroup.alpha = 1f;
+
+        if (_rectTransform != null)
+            _rectTransform.DOPunchScale(Vector3.one * 0.1f, 0.15f, 1, 0f)
+                .SetLink(gameObject);
+
+        StartFadeTimer();
+    }
+
+    private void StartFadeTimer()
+    {
+        _fadeTween = DOVirtual.DelayedCall(_duration, () =>
         {
-            FadeOut(fadeOutDuration);
+            FadeOut(_fadeOutDuration);
         }).SetLink(gameObject);
     }
 
@@ -152,6 +182,7 @@ public class UITipItem : MonoBehaviour
             _text.text = string.Empty;
         }
 
+        Message = null;
         _onComplete = null;
     }
 

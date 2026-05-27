@@ -1161,6 +1161,16 @@ namespace JulyCore.Provider.UI
                 return;
             }
 
+            // 同内容去重：已有相同 message 的 Tip 则重置计时器
+            for (int i = 0; i < _activeTips.Count; i++)
+            {
+                if (_activeTips[i] != null && _activeTips[i].Message == message)
+                {
+                    _activeTips[i].RestartTimer();
+                    return;
+                }
+            }
+
             var tip = _tipPool.Get();
             if (tip == null)
             {
