@@ -101,6 +101,11 @@ namespace JulyCore.Provider.Resource
             return UniTask.FromResult(false);
         }
 
+        public UniTask UnloadUnusedAssetsAsync()
+        {
+            return UniTask.CompletedTask;
+        }
+
         #endregion
 
         #region 场景加载

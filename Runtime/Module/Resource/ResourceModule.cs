@@ -75,7 +75,6 @@ namespace JulyCore.Module.Resource
             var handle = await _resourceProvider.LoadAssetAsync<T>(fileName, cancellationToken);
             if (handle == null || !handle.IsValid)
             {
-                handle?.Dispose();
                 return null;
             }
             handle.BindTo(bindTo);
@@ -91,7 +90,6 @@ namespace JulyCore.Module.Resource
             var handle = await _resourceProvider.LoadAssetAsync<GameObject>(fileName, cancellationToken);
             if (handle == null || !handle.IsValid)
             {
-                handle?.Dispose();
                 return null;
             }
             var instance = UnityEngine.Object.Instantiate(handle.Asset, parent);
@@ -159,6 +157,12 @@ namespace JulyCore.Module.Resource
         #endregion
 
         #region 检查
+
+        internal UniTask UnloadUnusedAssetsAsync()
+        {
+            EnsureProvider();
+            return _resourceProvider.UnloadUnusedAssetsAsync();
+        }
 
         internal bool HasAsset(string fileName)
         {

@@ -127,6 +127,19 @@ namespace JulyCore
 
             #endregion
 
+            #region 卸载
+
+            /// <summary>
+            /// 卸载所有引用计数为零的资源。
+            /// 框架会在场景切换后自动调用，通常无需手动调用。
+            /// </summary>
+            public static UniTask UnloadUnusedAssetsAsync()
+            {
+                return Module.UnloadUnusedAssetsAsync();
+            }
+
+            #endregion
+
             #region 检查
 
             /// <summary>

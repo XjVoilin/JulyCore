@@ -201,6 +201,8 @@ namespace JulyCore.Module.Scene
                 // LoadSceneMode.Single 会自动卸载旧场景，无需手动 Unload
                 var scene = await LoadSceneAsync(sceneName, LoadSceneMode.Single, cancellationToken);
 
+                await _resourceProvider.UnloadUnusedAssetsAsync();
+
                 EventBus.Publish(new SceneSwitchCompleteEvent
                 {
                     FromSceneName = fromSceneName ?? string.Empty,
@@ -243,6 +245,8 @@ namespace JulyCore.Module.Scene
             try
             {
                 var scene = await LoadSceneAsync(previousSceneName, LoadSceneMode.Single, cancellationToken);
+
+                await _resourceProvider.UnloadUnusedAssetsAsync();
 
                 EventBus.Publish(new SceneSwitchCompleteEvent
                 {

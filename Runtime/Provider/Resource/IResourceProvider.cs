@@ -29,6 +29,12 @@ namespace JulyCore.Provider.Resource
         /// </summary>
         bool HasAsset(string fileName);
 
+        /// <summary>
+        /// 卸载所有引用计数为零的资源。
+        /// 应在场景切换完成后调用。
+        /// </summary>
+        UniTask UnloadUnusedAssetsAsync();
+
         #region 场景加载
 
         /// <summary>
