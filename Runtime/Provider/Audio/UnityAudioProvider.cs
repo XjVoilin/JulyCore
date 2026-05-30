@@ -91,12 +91,15 @@ namespace JulyCore.Provider.Audio
                 return null;
             }
 
-            var audioClip = await _resourceProvider.LoadAsync<AudioClip>(fileName, cancellationToken);
-            if (audioClip == null)
+            var clipHandle = await _resourceProvider.LoadAssetAsync<AudioClip>(fileName, cancellationToken);
+            if (clipHandle?.Asset == null)
             {
+                clipHandle?.Dispose();
                 LogWarning($"[{Name}] 加载音频失败: {fileName}");
                 return null;
             }
+
+            var audioClip = clipHandle.Asset;
 
             try
             {
@@ -109,6 +112,7 @@ namespace JulyCore.Provider.Audio
                 var handle = new AudioHandle
                 {
                     AudioClip = audioClip,
+                    ResourceHandle = clipHandle,
                     AudioIdentifier = fileName,
                     AudioSource = audioSource,
                     Priority = options.Priority,
@@ -134,7 +138,7 @@ namespace JulyCore.Provider.Audio
             }
             catch (Exception ex)
             {
-                _resourceProvider.Unload(audioClip);
+                clipHandle.Dispose();
                 LogWarning($"[{Name}] 播放音频失败: {fileName}, {ex.Message}");
                 return null;
             }
@@ -528,8 +532,7 @@ namespace JulyCore.Provider.Audio
             }
 
             // 释放 AudioClip 资源引用
-            if (_resourceProvider != null && handle.AudioClip != null)
-                _resourceProvider.Unload(handle.AudioClip);
+            handle.ResourceHandle?.Dispose();
         }
 
         #endregion

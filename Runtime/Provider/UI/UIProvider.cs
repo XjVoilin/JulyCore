@@ -93,7 +93,7 @@ namespace JulyCore.Provider.UI
         private readonly Dictionary<UILayer, Transform> _contentRoots = new Dictionary<UILayer, Transform>();
         private readonly Dictionary<WindowIdentifier, UIInfo> _uiInfos = new Dictionary<WindowIdentifier, UIInfo>();
         private readonly Dictionary<int, WindowIdentifier> _idToIdentifier = new Dictionary<int, WindowIdentifier>();
-        private readonly Dictionary<Type, GameObject> _preloadedPrefabs = new Dictionary<Type, GameObject>();
+        private readonly Dictionary<Type, ResourceHandle<GameObject>> _preloadedPrefabs = new();
 
         // 遮罩管理（每窗口独立遮罩）
         private readonly Dictionary<WindowIdentifier, GameObject> _masks = new Dictionary<WindowIdentifier, GameObject>();
@@ -168,18 +168,18 @@ namespace JulyCore.Provider.UI
         private async UniTask<GameObject> LoadWindowPrefab(Type uiType, CancellationToken cancellationToken = default)
         {
             // 优先使用预加载的预制体
-            if (_preloadedPrefabs.TryGetValue(uiType, out var preloadedPrefab) && preloadedPrefab != null)
+            if (_preloadedPrefabs.TryGetValue(uiType, out var preloaded) && preloaded?.Asset != null)
             {
-                return preloadedPrefab;
+                return preloaded.Asset;
             }
 
             // 从资源提供者加载
             var resourcePath = _pathResolver.GetResourcePath(uiType);
-            GameObject prefab;
-            
+            ResourceHandle<GameObject> handle;
+
             try
             {
-                prefab = await _resourceProvider.LoadAsync<GameObject>(resourcePath, cancellationToken);
+                handle = await _resourceProvider.LoadAssetAsync<GameObject>(resourcePath, cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -193,14 +193,17 @@ namespace JulyCore.Provider.UI
                 throw new JulyException(msg, ex);
             }
 
-            if (prefab == null)
+            if (handle?.Asset == null)
             {
+                handle?.Dispose();
                 var msg = $"[{Name}] UI预制体未找到: {resourcePath} (类型: {uiType.Name})";
                 LogError(msg);
                 throw new JulyException(msg);
             }
 
-            return prefab;
+            // 持有句柄，确保 UI 实例存活期间底层资源不被卸载，并在 ReleasePreload/OnShutdown 统一释放
+            _preloadedPrefabs[uiType] = handle;
+            return handle.Asset;
         }
 
         /// <summary>
@@ -389,7 +392,7 @@ namespace JulyCore.Provider.UI
                 throw new ArgumentNullException(nameof(uiType));
             }
 
-            return _preloadedPrefabs.TryGetValue(uiType, out var prefab) && prefab != null;
+            return _preloadedPrefabs.TryGetValue(uiType, out var handle) && handle?.Asset != null;
         }
 
         public async UniTask<bool> PreloadAsync(Type uiType, CancellationToken cancellationToken = default)
@@ -413,12 +416,13 @@ namespace JulyCore.Provider.UI
             try
             {
                 var resourcePath = _pathResolver.GetResourcePath(uiType);
-                var prefab = await _resourceProvider.LoadAsync<GameObject>(resourcePath, cancellationToken);
-                if (prefab != null)
+                var handle = await _resourceProvider.LoadAssetAsync<GameObject>(resourcePath, cancellationToken);
+                if (handle?.Asset != null)
                 {
-                    _preloadedPrefabs[uiType] = prefab;
+                    _preloadedPrefabs[uiType] = handle;
                     return true;
                 }
+                handle?.Dispose();
             }
             catch (Exception ex)
             {
@@ -479,24 +483,18 @@ namespace JulyCore.Provider.UI
                 throw new ArgumentNullException(nameof(uiType));
             }
 
-            if (_preloadedPrefabs.Remove(uiType, out var prefab))
+            if (_preloadedPrefabs.Remove(uiType, out var handle))
             {
-                if (prefab != null)
-                {
-                    _resourceProvider.Unload(prefab);
-                }
+                handle?.Dispose();
             }
         }
 
         protected override void OnShutdown()
         {
             // 释放所有预加载的资源
-            foreach (var prefab in _preloadedPrefabs.Values)
+            foreach (var handle in _preloadedPrefabs.Values)
             {
-                if (prefab != null)
-                {
-                    _resourceProvider.Unload(prefab);
-                }
+                handle?.Dispose();
             }
 
             _preloadedPrefabs.Clear();
@@ -1025,6 +1023,7 @@ namespace JulyCore.Provider.UI
         private readonly IPoolProvider _poolProvider;
         private readonly Transform _uiRoot;
 
+        private ResourceHandle<GameObject> _tipPrefabHandle;
         private GameObject _tipPrefab;
         private Transform _tipContainer;
         private bool _isInitialized;
@@ -1090,7 +1089,8 @@ namespace JulyCore.Provider.UI
 
             try
             {
-                _tipPrefab = await _resourceProvider.LoadAsync<GameObject>(_config.TipPrefabPath);
+                _tipPrefabHandle = (await _resourceProvider.LoadAssetAsync<GameObject>(_config.TipPrefabPath))?.MarkPermanent();
+                _tipPrefab = _tipPrefabHandle?.Asset;
             }
             catch (Exception ex)
             {

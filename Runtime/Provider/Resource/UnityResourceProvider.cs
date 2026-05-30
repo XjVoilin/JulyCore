@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using JulyCore.Core;
@@ -22,17 +20,14 @@ namespace JulyCore.Provider.Resource
         public override int Priority => Frameworkconst.PriorityResourceProvider;
         protected override LogChannel LogChannel => LogChannel.Resource;
 
-        private readonly ConcurrentDictionary<UnityEngine.Object, int> _refCounts = new();
-        private readonly ConcurrentDictionary<string, UnityEngine.Object> _pathToResourceCache = new();
-        private readonly ConcurrentDictionary<UnityEngine.Object, string> _objectToPath = new();
-        private readonly ConcurrentDictionary<string, UnityEngine.Object> _preloadedResources = new();
-
         protected override UniTask OnInitAsync()
         {
             return UniTask.CompletedTask;
         }
 
-        public async UniTask<T> LoadAsync<T>(string fileName, CancellationToken cancellationToken = default)
+        #region 资源加载
+
+        public async UniTask<ResourceHandle<T>> LoadAssetAsync<T>(string fileName, CancellationToken cancellationToken = default)
             where T : UnityEngine.Object
         {
             if (string.IsNullOrEmpty(fileName))
@@ -42,19 +37,6 @@ namespace JulyCore.Provider.Resource
             }
 
             var path = NormalizePath(fileName);
-
-            if (TryGetCachedResource<T>(path, out var cachedResource))
-            {
-                IncrementRefCount(cachedResource);
-                return cachedResource;
-            }
-
-            if (_preloadedResources.TryRemove(path, out var preloadedObj) && preloadedObj is T preloaded)
-            {
-                RecordResourceMapping(path, preloaded);
-                IncrementRefCount(preloaded);
-                return preloaded;
-            }
 
             try
             {
@@ -74,9 +56,14 @@ namespace JulyCore.Provider.Resource
                     return null;
                 }
 
-                RecordResourceMapping(path, resource);
-                IncrementRefCount(resource);
-                return resource;
+                return new ResourceHandle<T>(resource, () =>
+                {
+                    // GameObject 不能用 Resources.UnloadAsset 释放
+                    if (!(resource is GameObject))
+                    {
+                        Resources.UnloadAsset(resource);
+                    }
+                });
             }
             catch (OperationCanceledException)
             {
@@ -90,117 +77,6 @@ namespace JulyCore.Provider.Resource
             }
         }
 
-        public async UniTask<bool> PreloadAsync<T>(string fileName, CancellationToken cancellationToken = default)
-            where T : UnityEngine.Object
-        {
-            if (string.IsNullOrEmpty(fileName))
-            {
-                return false;
-            }
-
-            var path = NormalizePath(fileName);
-
-            if (_preloadedResources.ContainsKey(path) || _pathToResourceCache.ContainsKey(path))
-            {
-                return true;
-            }
-
-            try
-            {
-                var request = Resources.LoadAsync<T>(path);
-                await request.ToUniTask(cancellationToken: cancellationToken);
-
-                if (request.asset != null)
-                {
-                    _preloadedResources[path] = request.asset;
-                    return true;
-                }
-
-                return false;
-            }
-            catch (OperationCanceledException)
-            {
-                return false;
-            }
-            catch (Exception ex)
-            {
-                GF.LogException(ex);
-                return false;
-            }
-        }
-
-        public async UniTask<T> LoadSubAssetAsync<T>(string fileName, string assetName, CancellationToken cancellationToken = default)
-            where T : UnityEngine.Object
-        {
-            if (string.IsNullOrEmpty(fileName) || string.IsNullOrEmpty(assetName))
-            {
-                LogWarning($"[{Name}] 子资源参数不能为空");
-                return null;
-            }
-
-            var path = NormalizePath(fileName);
-
-            try
-            {
-                var allAssets = Resources.LoadAll<T>(path);
-                await UniTask.Yield(cancellationToken);
-
-                foreach (var asset in allAssets)
-                {
-                    if (asset.name == assetName)
-                    {
-                        return asset;
-                    }
-                }
-
-                LogWarning($"[{Name}] 未找到子资源: {path}/{assetName}");
-                return null;
-            }
-            catch (OperationCanceledException)
-            {
-                LogWarning($"[{Name}] 加载子资源已取消: {path}/{assetName}");
-                return null;
-            }
-            catch (Exception ex)
-            {
-                GF.LogException(ex);
-                return null;
-            }
-        }
-
-        public async UniTask<List<T>> LoadAllSubAssetsAsync<T>(string fileName, CancellationToken cancellationToken = default)
-            where T : UnityEngine.Object
-        {
-            if (string.IsNullOrEmpty(fileName))
-            {
-                return new List<T>();
-            }
-
-            var path = NormalizePath(fileName);
-
-            try
-            {
-                var allAssets = Resources.LoadAll<T>(path);
-                await UniTask.Yield(cancellationToken);
-                return new List<T>(allAssets);
-            }
-            catch (OperationCanceledException)
-            {
-                LogWarning($"[{Name}] 加载所有子资源已取消: {path}");
-                return new List<T>();
-            }
-            catch (Exception ex)
-            {
-                GF.LogException(ex);
-                return new List<T>();
-            }
-        }
-
-        public UniTask<bool> DownloadByTagWithRetryAsync(string tag, int maxRetries = 3, CancellationToken ct = default)
-        {
-            return UniTask.FromResult(false);
-        }
-
         public bool HasAsset(string fileName)
         {
             if (string.IsNullOrEmpty(fileName))
@@ -209,11 +85,6 @@ namespace JulyCore.Provider.Resource
             }
 
             var path = NormalizePath(fileName);
-
-            if (_pathToResourceCache.ContainsKey(path) || _preloadedResources.ContainsKey(path))
-            {
-                return true;
-            }
 
             var resource = Resources.Load(path);
             if (resource != null)
@@ -225,54 +96,12 @@ namespace JulyCore.Provider.Resource
             return false;
         }
 
-        public void Unload(UnityEngine.Object obj)
+        public UniTask<bool> DownloadByTagWithRetryAsync(string tag, int maxRetries = 3, CancellationToken ct = default)
         {
-            if (obj == null)
-            {
-                return;
-            }
-
-            try
-            {
-                if (!_objectToPath.TryGetValue(obj, out var path))
-                {
-                    LogWarning($"[{Name}] 未找到资源对象: {obj.name}");
-                    return;
-                }
-
-                if (DecrementRefCount(obj))
-                {
-                    CleanupResourceMappings(path);
-
-                    if (!(obj is GameObject))
-                    {
-                        Resources.UnloadAsset(obj);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                GF.LogException(ex);
-            }
+            return UniTask.FromResult(false);
         }
 
-        public void UnloadAll()
-        {
-            try
-            {
-                _pathToResourceCache.Clear();
-                _objectToPath.Clear();
-                _refCounts.Clear();
-                _preloadedResources.Clear();
-
-                Resources.UnloadUnusedAssets();
-                GC.Collect();
-            }
-            catch (Exception ex)
-            {
-                GF.LogException(ex);
-            }
-        }
+        #endregion
 
         #region 场景加载
 
@@ -358,17 +187,6 @@ namespace JulyCore.Provider.Resource
 
         #endregion
 
-        protected override void OnShutdown()
-        {
-            while (ResourceReleaseQueue.PendingCount > 0)
-            {
-                ResourceReleaseQueue.ProcessReleaseQueue(100);
-            }
-
-            UnloadAll();
-            ResourceReleaseQueue.Clear();
-        }
-
         #region Private Methods
 
         private string NormalizePath(string input)
@@ -388,74 +206,6 @@ namespace JulyCore.Provider.Resource
 
             path = path.Replace('\\', '/');
             return path;
-        }
-
-        private bool TryGetCachedResource<T>(string path, out T resource) where T : UnityEngine.Object
-        {
-            resource = null;
-            if (_pathToResourceCache.TryGetValue(path, out var cachedObj))
-            {
-                if (cachedObj == null)
-                {
-                    _pathToResourceCache.TryRemove(path, out _);
-                    return false;
-                }
-
-                if (cachedObj is T t)
-                {
-                    resource = t;
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private void IncrementRefCount(UnityEngine.Object obj)
-        {
-            _refCounts.AddOrUpdate(obj, 1, (key, oldValue) => oldValue + 1);
-        }
-
-        private bool DecrementRefCount(UnityEngine.Object obj)
-        {
-            if (!_refCounts.TryGetValue(obj, out var count))
-            {
-                return false;
-            }
-
-            if (count <= 1)
-            {
-                _refCounts.TryRemove(obj, out _);
-                return true;
-            }
-
-            _refCounts[obj] = count - 1;
-            return false;
-        }
-
-        private void RecordResourceMapping(string path, UnityEngine.Object resource)
-        {
-            _objectToPath[resource] = path;
-            _pathToResourceCache[path] = resource;
-        }
-
-        private void CleanupResourceMappings(string path)
-        {
-            _pathToResourceCache.TryRemove(path, out _);
-
-            var objectsToRemove = new List<UnityEngine.Object>();
-            foreach (var kvp in _objectToPath)
-            {
-                if (kvp.Value == path)
-                {
-                    objectsToRemove.Add(kvp.Key);
-                }
-            }
-
-            foreach (var obj in objectsToRemove)
-            {
-                _objectToPath.TryRemove(obj, out _);
-            }
         }
 
         #endregion

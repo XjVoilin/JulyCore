@@ -203,6 +203,11 @@ namespace JulyCore.Provider.Audio
         public AudioClip AudioClip { get; internal set; }
 
         /// <summary>
+        /// 音频资源句柄（释放时减少底层引用计数）
+        /// </summary>
+        internal JulyCore.Provider.Resource.ResourceHandle<AudioClip> ResourceHandle { get; set; }
+
+        /// <summary>
         /// 音频资源标识符（文件名）
         /// </summary>
         public string AudioIdentifier { get; internal set; }

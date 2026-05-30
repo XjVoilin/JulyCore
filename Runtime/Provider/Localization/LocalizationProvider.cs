@@ -55,13 +55,12 @@ namespace JulyCore.Provider.Localization
             try
             {
                 // 尝试从资源加载语言包
-                var textAsset =
-                    await _resourceProvider.LoadAsync<TextAsset>(GetLanguageFileName(languageCode), cancellationToken);
-                if (textAsset != null)
+                using var handle =
+                    await _resourceProvider.LoadAssetAsync<TextAsset>(GetLanguageFileName(languageCode), cancellationToken);
+                if (handle?.Asset != null)
                 {
-                    var data = _serializeProvider.Deserialize<Dictionary<string, string>>(Encoding.UTF8.GetBytes(textAsset.text));
+                    var data = _serializeProvider.Deserialize<Dictionary<string, string>>(Encoding.UTF8.GetBytes(handle.Asset.text));
                     _languageDataDic[languageCode] = data;
-                    _resourceProvider.Unload(textAsset);
                     return true;
                 }
 

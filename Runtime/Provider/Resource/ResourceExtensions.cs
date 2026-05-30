@@ -33,7 +33,7 @@ namespace JulyCore.Provider.Resource
         {
             if (img == null) return null;
 
-            var handle = await LoadResourceAsync<Sprite>(img, resName, false, cancellationToken);
+            var handle = await LoadResourceAsync<Sprite>(img, resName, cancellationToken);
             if (handle != null && handle.IsValid)
             {
                 img.overrideSprite = handle.Asset;
@@ -62,7 +62,7 @@ namespace JulyCore.Provider.Resource
         {
             if (renderer == null) return null;
 
-            var handle = await LoadResourceAsync<Sprite>(renderer, resName, false, cancellationToken);
+            var handle = await LoadResourceAsync<Sprite>(renderer, resName, cancellationToken);
             if (handle != null && handle.IsValid)
             {
                 renderer.sprite = handle.Asset;
@@ -91,7 +91,7 @@ namespace JulyCore.Provider.Resource
         {
             if (img == null) return null;
 
-            var handle = await LoadResourceAsync<Texture>(img, resName, false, cancellationToken);
+            var handle = await LoadResourceAsync<Texture>(img, resName, cancellationToken);
             if (handle != null && handle.IsValid)
             {
                 img.texture = handle.Asset;
@@ -111,7 +111,6 @@ namespace JulyCore.Provider.Resource
         public static async UniTask<ResourceHandle<T>> LoadResourceAsync<T>(
             this UnityEngine.Component component,
             string fileName,
-            bool captureStackTrace = false,
             CancellationToken cancellationToken = default) where T : Object
         {
             if (component == null)
@@ -120,7 +119,7 @@ namespace JulyCore.Provider.Resource
                 return null;
             }
 
-            var handle = await GF.Resource.LoadWithHandleAsync<T>(fileName, captureStackTrace, cancellationToken);
+            var handle = await GF.Resource.LoadWithHandleAsync<T>(fileName, cancellationToken);
             if (handle != null)
             {
                 handle.BindTo(component);
@@ -135,7 +134,6 @@ namespace JulyCore.Provider.Resource
         public static async UniTask<ResourceHandle<T>> LoadResourceAsync<T>(
             this GameObject gameObject,
             string fileName,
-            bool captureStackTrace = false,
             CancellationToken cancellationToken = default) where T : Object
         {
             if (gameObject == null)
@@ -144,41 +142,13 @@ namespace JulyCore.Provider.Resource
                 return null;
             }
 
-            var handle = await GF.Resource.LoadWithHandleAsync<T>(fileName, captureStackTrace, cancellationToken);
+            var handle = await GF.Resource.LoadWithHandleAsync<T>(fileName, cancellationToken);
             if (handle != null)
             {
                 handle.BindTo(gameObject);
             }
 
             return handle;
-        }
-
-        /// <summary>
-        /// 批量加载资源并绑定到组件
-        /// </summary>
-        public static async UniTask<ResourceHandle<T>[]> LoadResourcesAsync<T>(
-            this UnityEngine.Component component,
-            string[] fileNames,
-            bool captureStackTrace = false,
-            CancellationToken cancellationToken = default) where T : Object
-        {
-            if (component == null || fileNames == null || fileNames.Length == 0)
-            {
-                return System.Array.Empty<ResourceHandle<T>>();
-            }
-
-            var handles = new ResourceHandle<T>[fileNames.Length];
-            for (int i = 0; i < fileNames.Length; i++)
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    break;
-                }
-
-                handles[i] = await component.LoadResourceAsync<T>(fileNames[i], captureStackTrace, cancellationToken);
-            }
-
-            return handles;
         }
 
         #endregion
